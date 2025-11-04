@@ -5,23 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Citrin's APCSP Console</title>
 <style>
-/* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
+/* Aesthetic from image_b7a3ec.png
+  Dark grey, green run, red stop 
+*/
 :root {
-  --bg: #2b2b2b; /* IDE background */
-  --panel-bg: #212121; /* Panel background */
-  --border: #3c3c3c; /* Border color */
-  --text-primary: #a9b7c6; /* Light gray text */
-  --text-muted: #808080; /* Muted gray text */
-  --run-btn-bg: #5f9040; /* Green for run button */
-  --run-btn-text: #ffffff; /* White for run button text */
-  --stop-btn-bg: #a33b3b; /* Red for stop button */
-  --console-bg: #212121; /* Console background */
-  --console-log: #a9b7c6; /* Console default log text */
-  --console-err: #ff8c8c; /* Console error text */
-  --console-sys: #92a4c1; /* Console system messages */
-  --editor-bg: #2b2b2b; /* Editor background (matching main bg) */
-  --editor-text: #a9b7c6; /* Editor text */
-  --editor-caret: #ffc66d; /* Caret color */
+  --bg: #1e1e1e;
+  --panel-bg: #252526;
+  --border: #3c3c3c;
+  --text-primary: #d4d4d4;
+  --text-muted: #808080;
+  --run-btn-bg: #007acc; /* Using a more standard green, like VS Code's */
+  --run-btn-bg: #5f9040;
+  --run-btn-text: #ffffff;
+  --stop-btn-bg: #a33b3b;
+  --console-bg: #1e1e1e;
+  --console-log: #d4d4d4;
+  --console-err: #ff8c8c;
+  --console-sys: #92a4c1;
+  --editor-bg: #1e1e1e;
+  --editor-text: #d4d4d4;
+  --editor-caret: #aeafad;
 }
 
 /* General styling */
@@ -33,7 +36,7 @@ body {
   font: 16px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Use 100vh for full height */
+  height: 100vh;
 }
 
 /* Header styling */
@@ -41,29 +44,24 @@ header {
   padding: 10px 15px;
   border-bottom: 1px solid var(--border);
   background: var(--panel-bg);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+header span {
+  font-weight: normal;
   color: var(--text-muted);
-  font-size: 13px;
-  flex-shrink: 0; /* Prevent header from shrinking */
-}
-header .title {
-    font-size: 16px;
-    font-weight: normal;
-    color: var(--text-primary);
-    margin: 0;
-}
-header .subtitle {
-    margin-left: 15px;
-    color: var(--text-muted);
 }
 
 /* Main layout (Side-by-side Grid) */
 main {
   flex-grow: 1;
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr; /* Side-by-side columns */
+  grid-template-columns: 1.1fr 0.9fr;
   gap: 10px;
   padding: 10px;
-  min-height: 0; /* Fix for flex/grid overflow */
+  min-height: 0;
 }
 
 /* Card/Panel styling */
@@ -71,10 +69,10 @@ main {
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  overflow: hidden; /* Important for containing children */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* Fix for flex/grid overflow */
+  min-height: 0;
 }
 
 .card h2 {
@@ -83,8 +81,8 @@ main {
   padding: 8px 12px;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-  flex-shrink: 0; /* Prevent header from shrinking */
+  background: #333333; /* Slightly different header for panel */
+  flex-shrink: 0;
 }
 
 /* Toolbar styling */
@@ -95,7 +93,7 @@ main {
   border-bottom: 1px solid var(--border);
   align-items: center;
   flex-wrap: wrap;
-  flex-shrink: 0; /* Prevent toolbar from shrinking */
+  flex-shrink: 0;
 }
 button, select {
   background: #3c3f41;
@@ -168,7 +166,7 @@ footer {
 
 <body>
 <header>
-  <div class="title">Citrin's APCSP Console<span class="subtitle">(Version 1.0)</span></div>
+  Citrin's APCSP Console <span>(Version 1.0)</span>
 </header>
 
 <main>
@@ -195,7 +193,7 @@ footer {
   </section>
 </main>
 
-<footer>KeeWeb Inspired UI · AP CSP Emulator</footer>
+<footer>AP CSP Emulator</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
@@ -283,16 +281,16 @@ window.addEventListener("DOMContentLoaded", () => {
     return procs;
   }
 
-  // ---------- Expression evaluator (FIXED: Added &| to safe, case-sensitive rewrite) ----------
+  // ---------- Expression evaluator (All fixes applied) ----------
   function makeEval(env, procs){
-    // FIX 1: Added & and | to the safe regex
+    // FIX: Added & and | to the safe regex
     const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:&|]+$/u;
     
     function rewrite(expr){
       return expr
         .replace(/[“”]/g,'"')
         .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        // FIX 2: Made replacements case-sensitive (removed /gi)
+        // FIX: Made replacements case-sensitive (removed /gi)
         .replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/\bNOT\b/g,"!")
         .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi, "LENGTH($1)") // This one can stay case-insensitive
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
@@ -341,7 +339,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---------- Globals for current program ----------
   let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
 
-  // ---------- Executor (FIXED: Added RETURN logic and SCOPE for SET) ----------
+  // ---------- Executor (All fixes applied) ----------
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
