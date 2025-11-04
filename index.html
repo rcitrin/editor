@@ -168,7 +168,7 @@ footer {
 
 <body>
 <header>
-  <div class="title">Citrin's APCSP Console <span class="subtitle">(Version 1.0)</span></div>
+  <div class="title">Citrin's APCSP Console<span class="subtitle">(Version 1.0)</span></div>
 </header>
 
 <main>
@@ -283,16 +283,18 @@ window.addEventListener("DOMContentLoaded", () => {
     return procs;
   }
 
-  // ---------- Expression evaluator (NEW, ROBUST IMPLEMENTATION) ----------
+  // ---------- Expression evaluator (FIXED: Added &| to safe, case-sensitive rewrite) ----------
   function makeEval(env, procs){
-    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
+    // FIX 1: Added & and | to the safe regex
+    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:&|]+$/u;
     
     function rewrite(expr){
       return expr
         .replace(/[“”]/g,'"')
         .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
-        .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi, "LENGTH($1)")
+        // FIX 2: Made replacements case-sensitive (removed /gi)
+        .replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/\bNOT\b/g,"!")
+        .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi, "LENGTH($1)") // This one can stay case-insensitive
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
     }
 
@@ -308,7 +310,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     return async function evalExpr(expr){
       const e = rewrite(expr);
-      if(!safe.test(e)) throw "Expression contains unsupported characters";
+      if(!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
 
       // --- Build explicit scope ---
       const scope = {
@@ -489,30 +491,63 @@ window.addEventListener("DOMContentLoaded", () => {
     if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
   });
 
-  // Samples
+  // Samples (with corrected IF/ELSE sample)
   const samples = {
-"AP CSP: Hello World (Standard)":
-`PROCEDURE hello()
-  DISPLAY("hello")
+"Variables & Set":
+`SET score <- 100
+SET name <- "Alice"
+DISPLAY(name + " has a score of " + score)
+
+SET score <- score + 10
+DISPLAY("New score is " + score)`,
+
+"Selection (IF/ELSE)":
+`SET age <- 17
+
+IF (age >= 18)
+  DISPLAY("You can vote.")
+ELSE
+  DISPLAY("You are not old enough to vote.")
+END IF
+
+IF (age < 13)
+  DISPLAY("You are a child.")
+END IF
+
+IF (age >= 13 AND age < 20)
+  DISPLAY("You are a teenager.")
+END IF`,
+
+"Loops (REPEAT)":
+`DISPLAY("--- REPEAT n TIMES ---")
+REPEAT 3 TIMES
+  DISPLAY("Hello!")
+END REPEAT
+
+DISPLAY("--- REPEAT UNTIL ---")
+SET count <- 0
+REPEAT UNTIL (count > 2)
+  DISPLAY("Count is " + count)
+  SET count <- count + 1
+END REPEAT
+DISPLAY("Loop finished.")`,
+
+"Procedures (Statements)":
+`PROCEDURE greet(name)
+  DISPLAY("Hello, " + name)
 END PROCEDURE
 
-CALL hello()`,
+CALL greet("Alice")
+greet("Bob")`,
 
-"AP CSP: Hello World (Relaxed Braces)":
-`PROCEDURE hello() {
-  DISPLAY("hello")
-}
-
-hello()`,
-
-"AP CSP: Return Value":
+"Return Values":
 `PROCEDURE payCalc(hours, rate) {
   RETURN (hours * rate)
 }
 
 DISPLAY(payCalc(40, 40))`,
 
-"AP CSP: Local Scope":
+"Local Scope":
 `PROCEDURE square(n) {
   RETURN (n*n)
 }
@@ -522,7 +557,23 @@ PROCEDURE makeSquare() {
   DISPLAY("answer is " + result)
 }
 
-makeSquare()`
+makeSquare()`,
+
+"List Processing (AP CSP Style)":
+`SET myList <- []
+APPEND(myList, 10)
+APPEND(myList, 20)
+APPEND(myList, 30)
+
+DISPLAY("The list is: " + myList)
+DISPLAY("The length is: " + LENGTH OF myList)
+
+DISPLAY("--- LOOPING LIST ---")
+SET i <- 1
+REPEAT (LENGTH OF myList) TIMES
+  DISPLAY("Item at index " + i + " is " + myList[i])
+  SET i <- i + 1
+END REPEAT`
   };
 
   const sel = $("#samples");
