@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TechBoston CSP Console — Teacher-Sane APCSP</title>
+<title>TechBoston CSP Console — Teacher Mode</title>
 <style>
-:root { --bg:#000; --panel:#0b0f14; --accent:#60a5fa; --muted:#9aa4b2; --border:#1f2937; }
+:root { --bg:#A0A0A0; --panel:#0b0f14; --accent:#60a5fa; --muted:#9aa4b2; --border:#1f2937; }
 *{box-sizing:border-box}
-body{margin:0;background:#000;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
-header{padding:18px 20px;border-bottom:1px solid var(--border);background:#000;position:sticky;top:0;z-index:1}
+body{margin:0;background:#A0A0A0;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+header{padding:18px 20px;border-bottom:1px solid var(--border);background:#A0A0A0;position:sticky;top:0;z-index:1}
 h1{margin:0 0 6px;font-size:20px}
 .sub{color:var(--muted);font-size:13px}
 main{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:16px}
@@ -23,7 +23,6 @@ textarea{width:100%;height:520px;resize:vertical;background:#0c1320;color:#e5e7e
 .line{white-space:pre-wrap}
 .log{color:#d1fae5}.err{color:#fecaca}.sys{color:#93c5fd}
 .status{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#0e1522}
-.kbd{padding:1px 6px;border:1px solid #334155;border-bottom-width:3px;border-radius:6px;background:#0b1220;font:12px ui-monospace,monospace;color:#cbd5e1}
 .prompt-wrap{display:none;gap:8px;padding:10px;border-top:1px solid var(--border);background:#0d1420}
 .prompt-wrap input{flex:1;background:#0b1220;color:#e5e7eb;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
 .prompt-wrap.show{display:flex}
@@ -33,160 +32,186 @@ footer{color:var(--muted);text-align:center;font-size:12px;padding:10px}
 
 <body>
 <header>
-  <h1>TechBoston CSP Console <span style="opacity:.7">(Teacher-Sane APCSP)</span></h1>
-  <div class="sub">
-    SET, DISPLAY, INPUT, IF/ELSE/END IF, REPEAT/END REPEAT, PROCEDURE/RETURN,
-    lists (1-based), APPEND/INSERT/REMOVE, LENGTH OF.
-    CALL optional. Braces ignored. Strings in quotes.
-  </div>
+<h1>TechBoston CSP Console</h1>
+<div class="sub">APCSP procedures, loops, lists, INPUT, RETURN. CALL optional. Braces ignored.</div>
 </header>
 
 <main>
-  <section class="card">
-    <h2>Program</h2>
-    <div class="toolbar">
-      <button class="primary" id="runBtn">▶ Run</button>
-      <button id="stopBtn" class="danger">■ Stop</button>
-      <select id="samples"></select>
-      <span style="margin-left:auto"></span>
-      <span class="sub">Ctrl/⌘ + Enter</span>
-    </div>
-    <textarea id="editor"></textarea>
-  </section>
+<section class="card">
+  <h2>Program</h2>
+  <div class="toolbar">
+    <button class="primary" id="runBtn">▶ Run</button>
+    <button id="stopBtn" class="danger">■ Stop</button>
+    <select id="samples"></select>
+    <span style="margin-left:auto"></span>
+    <span class="sub">Ctrl/⌘ + Enter</span>
+  </div>
+  <textarea id="editor"></textarea>
+</section>
 
-  <section class="card">
-    <h2>Console</h2>
-    <div class="console" id="console"></div>
-    <div class="prompt-wrap" id="promptWrap">
-      <input id="promptInput" placeholder="Enter input…" />
-      <button id="promptOk">OK</button>
-      <button id="promptCancel">Cancel</button>
-    </div>
-    <div class="status" id="status">Idle</div>
-  </section>
+<section class="card">
+  <h2>Console</h2>
+  <div class="console" id="console"></div>
+  <div class="prompt-wrap" id="promptWrap">
+    <input id="promptInput" placeholder="Enter input…" />
+    <button id="promptOk">OK</button>
+    <button id="promptCancel">Cancel</button>
+  </div>
+  <div class="status" id="status">Idle</div>
+</section>
 </main>
 
-<footer>MIT · Single-file · Built for students 🧠⚙️</footer>
+<footer>MIT · Built for real classrooms 🧠⚙️</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
-  const $ = s => document.querySelector(s);
-  const logEl=$("#console"), statusEl=$("#status"), editor=$("#editor");
-  const promptWrap=$("#promptWrap"), promptInput=$("#promptInput");
-  const promptOk=$("#promptOk"), promptCancel=$("#promptCancel");
-  let halted=false, inputResolve=null,inputReject=null;
+const $=s=>document.querySelector(s);
+const logEl=$("#console"),statusEl=$("#status"),editor=$("#editor");
+const promptWrap=$("#promptWrap"),promptInput=$("#promptInput"),promptOk=$("#promptOk"),promptCancel=$("#promptCancel");
+let halted=false,inputResolve=null,inputReject=null;
 
-  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=m;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-  const log=m=>out(m,"log"), err=m=>out(m,"err"), setStatus=s=>statusEl.textContent=s;
-  const showPrompt=msg=>{promptInput.value="";promptInput.placeholder=msg||"Input";promptWrap.classList.add("show");promptInput.focus();return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;});}
-  const hidePrompt=()=>promptWrap.classList.remove("show");
-  promptOk.onclick=()=>{if(inputResolve)inputResolve(promptInput.value);hidePrompt();}
-  promptCancel.onclick=()=>{if(inputReject)inputReject("cancel");hidePrompt();}
-  promptInput.onkeydown=e=>{if(e.key==="Enter")promptOk.click();if(e.key==="Escape")promptCancel.click();}
+const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=m;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
+const log=msg=>out(msg,"log"),err=msg=>out(msg,"err"),setStatus=s=>statusEl.textContent=s;
+const showPrompt=msg=>{promptInput.value="";promptInput.placeholder=msg||"Input";promptWrap.classList.add("show");promptInput.focus();return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;});}
+const hidePrompt=()=>promptWrap.classList.remove("show");
+promptOk.onclick=()=>{if(inputResolve)inputResolve(promptInput.value);hidePrompt();}
+promptCancel.onclick=()=>{if(inputReject)inputReject("cancel");hidePrompt();}
+promptInput.onkeydown=e=>{if(e.key==="Enter")promptOk.click();if(e.key==="Escape")promptCancel.click();}
 
-  function preprocess(src){
-    return src.split(/\r?\n/).map((raw,idx)=>{
-      const s=raw.replace(/#.*$/,"").replace(/\/\/.*$/,"").replace(/[{}]/g,"").trim();
-      return { raw,s,idx };
-    });
-  }
+function preprocess(src){
+return src.split(/\r?\n/).map((raw,idx)=>{
+const s=raw.replace(/#.*$/,"").replace(/\/\/.*$/,"").replace(/[{}]/g,"").trim();
+return {raw,s,idx};
+});
+}
 
-  function buildBlocks(lines){
-    const stack=[],blocks={};
-    for(let i=0;i<lines.length;i++){
-      const t=lines[i].s;
-      if(/^IF\b/i.test(t))stack.push({type:"IF",i});
-      else if(/^ELSE\b/i.test(t)){const top=stack.at(-1);blocks[top.i].else=i;}
-      else if(/^END\s*IF\b/i.test(t)){const top=stack.pop();blocks[top.i].end=i;}
-      else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t))stack.push({type:"RT",i});
-      else if(/^REPEAT\s+UNTIL\b/i.test(t))stack.push({type:"RU",i});
-      else if(/^END\s*REPEAT\b/i.test(t)){const top=stack.pop();blocks[top.i]={end:i};}
-    }
-    return blocks;
-  }
+function buildBlocks(lines){
+const stack=[],blocks={};
+for(let i=0;i<lines.length;i++){
+const t=lines[i].s;
+if(/^IF\b/i.test(t))stack.push({type:"IF",i});
+else if(/^ELSE\b/i.test(t)){const top=stack.at(-1);blocks[top.i].else=i;}
+else if(/^END\s*IF\b/i.test(t)){const top=stack.pop();blocks[top.i].end=i;}
+else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t))stack.push({type:"RT",i});
+else if(/^REPEAT\s+UNTIL\b/i.test(t))stack.push({type:"RU",i});
+else if(/^END\s*REPEAT\b/i.test(t)){const top=stack.pop();blocks[top.i]={end:i};}
+}
+return blocks;
+}
 
-  function parseProcedures(lines){
-    const procs={};let cur=null;
-    for(let i=0;i<lines.length;i++){
-      const t=lines[i].s;
-      if(/^PROCEDURE\b/i.test(t)){
-        const m=t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\((.*)\)/i);
-        cur={name:m[1],params:(m[2]||"").split(",").map(x=>x.trim()).filter(Boolean),start:i+1};
-      }
-      if(/^END\s+PROCEDURE/i.test(t)){cur.end=i;procs[cur.name]=cur;cur=null;}
-    }
-    return procs;
-  }
+function parseProcedures(lines){
+const procs={};let cur=null;
+for(let i=0;i<lines.length;i++){
+const t=lines[i].s;
+if(/^PROCEDURE\b/i.test(t)){
+const m=t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\((.*)\)/i);
+cur={name:m[1],params:(m[2]||"").split(",").map(v=>v.trim()).filter(Boolean),start:i+1};
+}
+if(/^END\s+PROCEDURE/i.test(t)){cur.end=i;procs[cur.name]=cur;cur=null;}
+}
+return procs;
+}
 
-  function makeEval(env,procs,lines,blocks){
-    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
-    const rewrite=expr=>expr
-      .replace(/[“”]/g,'"').replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-      .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
-      .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi,"LENGTH($1)")
-      .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g,"IDX($1,($2))");
-    const envProxy=new Proxy(env,{get(t,p){if(p in t)return t[p];if(procs[p])return async(...a)=>callProc(p,a);}});
-    async function callProc(name,args){
-      const p=procs[name],local=Object.create(env);
-      p.params.forEach((v,i)=>local[v]=args[i]);
-      return (await exec(p.start,p.end,lines,blocks,procs,local,true)).__ret;
-    }
-    return async expr=>{
-      const e=rewrite(expr);if(!safe.test(e))throw "Bad expression";
-      const INPUT=async p=>showPrompt(p||"Input"),APPEND=(l,v)=>l.push(v),INSERT=(l,i,v)=>l.splice(i-1,0,v),REMOVE=(l,i)=>l.splice(i-1,1),LENGTH=l=>l.length,IDX=(l,i)=>l[(i|0)-1];
-      return await (new Function("env","Math","INPUT","APPEND","INSERT","REMOVE","LENGTH","IDX",`with(env){return(${e})}`))(envProxy,Math,INPUT,APPEND,INSERT,REMOVE,LENGTH,IDX);
-    };
-  }
+function makeEval(env,procs,lines,blocks){
+const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
+const rewrite=expr=>expr
+.replace(/[“”]/g,'"').replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
+.replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
+.replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi,"LENGTH($1)")
+.replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g,"IDX($1,($2))");
+const envProxy=new Proxy(env,{get(t,p){if(p in t)return t[p];if(procs[p])return async(...a)=>callProc(p,a);}});
+async function callProc(name,args){
+const p=procs[name],local=Object.create(env);
+p.params.forEach((v,i)=>local[v]=args[i]);
+return (await exec(p.start,p.end,lines,blocks,procs,local,true)).__ret;
+}
+return async expr=>{
+const e=rewrite(expr);if(!safe.test(e))throw "Bad expression";
+const INPUT=async p=>showPrompt(p||"Input"),APPEND=(l,v)=>l.push(v),INSERT=(l,i,v)=>l.splice(i-1,0,v),REMOVE=(l,i)=>l.splice(i-1,1),LENGTH=l=>l.length,IDX=(l,i)=>l[(i|0)-1];
+return await (new Function("env","Math","INPUT","APPEND","INSERT","REMOVE","LENGTH","IDX",`with(env){return(${e})}`))(envProxy,Math,INPUT,APPEND,INSERT,REMOVE,LENGTH,IDX);
+};
+}
 
-  async function exec(start,end,lines,blocks,procs,env,inside){
-    const evalExpr=makeEval(env,procs,lines,blocks);
-    let i=start;
-    while(i<end){
-      if(halted)return;
-      const {s,idx}=lines[i++];
-      if(!s)continue;
-      if(/^PROCEDURE\b/i.test(s)){i=procs[s.split(/\s+/)[1].split("(")[0]].end+1;continue;}
-      if(/^END\s+PROCEDURE/i.test(s)){if(inside)return;}
-      if(/^DISPLAY\s*\(/i.test(s)){log(await evalExpr(s.slice(7)));continue;}
-      if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
-        const m=s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);env[m[1]]=await evalExpr(m[2]);continue;}
-      if(/^IF\b/i.test(s)){const cond=s.replace(/^IF\b/i,"").replace(/THEN/i,"");const ok=await evalExpr(cond);const meta=blocks[idx];if(!ok)i=(meta.else??meta.end)+1;continue;}
-      if(/^ELSE\b/i.test(s)){i=blocks[lines.findIndex(l=>l.idx<idx&&/^IF\b/i.test(l.s))].end+1;continue;}
-      if(/^END\s*IF/i.test(s))continue;
-      if(/^REPEAT\s+\d+\s+TIMES/i.test(s)){const m=s.match(/REPEAT\s+(\d+)/);env[`c${idx}`]??=0;env[`c${idx}`]++;if(env[`c${idx}`]>+m[1]){delete env[`c${idx}`];i=blocks[idx].end+1;}continue;}
-      if(/^REPEAT\s+UNTIL/i.test(s)){env[`u${idx}`]=s.replace(/^REPEAT\s+UNTIL/i,"");continue;}
-      if(/^END\s*REPEAT/i.test(s)){const j=lines.findIndex((l,k)=>k<idx&&/^REPEAT\b/i.test(l.s));if(/^REPEAT\s+UNTIL/i.test(lines[j].s)){const ok=await evalExpr(env[`u${j}`]);if(!ok)i=j+1;}continue;}
-      if(/^CALL\b/i.test(s)){await evalExpr(s.replace(/^CALL\s+/i,""));continue;}
-      if(/^[A-Za-z_]\w*\s*\(/.test(s)){await evalExpr(s);continue;}
-      if(/^INPUT\s*\(/i.test(s)){await evalExpr(s);continue;}
-      throw `Unknown statement at line ${idx+1}: ${s}`;
-    }
-    return {};
-  }
+async function exec(start,end,lines,blocks,procs,env,inside){
+const evalExpr=makeEval(env,procs,lines,blocks);
+let i=start;
+while(i<end){
+if(halted)return;
+const {s,idx}=lines[i++];
+if(!s)continue;
 
-  async function run(src){
-    halted=false;logEl.innerHTML="";setStatus("Running…");
-    const lines=preprocess(src),blocks=buildBlocks(lines),procs=parseProcedures(lines),env=Object.create(null);
-    try{await exec(0,lines.length,lines,blocks,procs,env,false);setStatus("Done");}catch(e){err(e);setStatus("Crashed");}
-  }
+if(/^PROCEDURE\b/i.test(s)){
+const name=s.replace(/^PROCEDURE\s+/i,"").split("(")[0].trim();
+i=procs[name].end+1;continue;
+}
+if(/^END\s+PROCEDURE/i.test(s)){if(inside)return;}
 
-  $("#runBtn").onclick=()=>run(editor.value);
-  $("#stopBtn").onclick=()=>{halted=true;setStatus("Stopping…");};
-  document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")$("#runBtn").click();});
+if(/^DISPLAY\s*\(/i.test(s)){log(await evalExpr(s.slice(7)));continue;}
 
-  const samples={
-    "Hello & input":`DISPLAY("Your name?")\nSET n ← INPUT("name")\nDISPLAY("Hi " + n)`,
-    "Procedure & return":`PROCEDURE pay(h, r)\n  RETURN h * r\nEND PROCEDURE\n\nSET x ← pay(10,15)\nDISPLAY(x)\nCALL pay(2,3)`
-  };
+if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
+const m=s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
+env[m[1]]=await evalExpr(m[2]);continue;
+}
 
-  $("#samples").innerHTML='<option value="">Load sample…</option>'+
-    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
-  $("#samples").onchange=e=>{const k=e.target.value;if(samples[k])editor.value=samples[k];e.target.value="";};
+if(/^IF\b/i.test(s)){
+const cond=s.replace(/^IF\b/i,"").replace(/THEN/i,"");
+const ok=await evalExpr(cond);
+const meta=blocks[idx];
+if(!ok)i=(meta.else??meta.end)+1;
+continue;
+}
+if(/^ELSE\b/i.test(s)){
+const startIf=[...lines.keys()].reverse().find(k=>k<i-1 && /^IF\b/i.test(lines[k].s));
+i=blocks[lines[startIf].idx].end+1;continue;
+}
+if(/^END\s*IF/i.test(s))continue;
 
-  // 🚨 THIS IS THE LINE YOU ASKED FOR 🚨
-  editor.value = "";   // start blank
+if(/^REPEAT\s+\d+\s+TIMES/i.test(s)){
+const m=s.match(/REPEAT\s+(\d+)/);
+env[`c${idx}`]??=0;env[`c${idx}`]++;
+if(env[`c${idx}`]>+m[1]){delete env[`c${idx}`];i=blocks[idx].end+1;}
+continue;
+}
+if(/^REPEAT\s+UNTIL/i.test(s)){env[`u${idx}`]=s.replace(/^REPEAT\s+UNTIL/i,"");continue;}
+if(/^END\s*REPEAT/i.test(s)){
+const j=[...lines.keys()].reverse().find(k=>k<i-1 && /^REPEAT\b/i.test(lines[k].s));
+if(/^REPEAT\s+UNTIL/i.test(lines[j].s)){
+const ok=await evalExpr(env[`u${j}`]);
+if(!ok)i=j+1;
+}
+continue;
+}
 
-  setStatus("Ready");
+if(/^CALL\b/i.test(s)){await evalExpr(s.replace(/^CALL\s+/i,""));continue;}
+if(/^[A-Za-z_]\w*\s*\(/.test(s)){await evalExpr(s);continue;}
+
+if(/^INPUT\s*\(/i.test(s)){await evalExpr(s);continue;}
+
+throw `Unknown statement at line ${idx+1}: ${s}`;
+}
+return {};
+}
+
+async function run(src){
+halted=false;logEl.innerHTML="";setStatus("Running…");
+const lines=preprocess(src),blocks=buildBlocks(lines),procs=parseProcedures(lines),env=Object.create(null);
+try{await exec(0,lines.length,lines,blocks,procs,env,false);setStatus("Done");}
+catch(e){err(e);setStatus("Crashed");}
+}
+
+$("#runBtn").onclick=()=>run(editor.value);
+$("#stopBtn").onclick=()=>{halted=true;setStatus("Stopping…");};
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")$("#runBtn").click();});
+
+const samples={
+"Input + Hello":`DISPLAY("Your name?")\nSET n ← INPUT("name")\nDISPLAY("Hi " + n)`,
+"Procedure":`PROCEDURE hello()\n  DISPLAY("hi")\nEND PROCEDURE\n\nhello()`
+};
+$("#samples").innerHTML='<option value="">Load sample…</option>'+Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
+$("#samples").onchange=e=>{const k=e.target.value;if(samples[k])editor.value=samples[k];e.target.value="";};
+
+editor.value=""; // blank start
+setStatus("Ready");
 });
 </script>
 </body>
