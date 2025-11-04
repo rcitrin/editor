@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>KeeWeb CSP Console (Corrected)</title>
+<title>KeeWeb CSP Console (Final Fix)</title>
 <style>
 /* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
 :root {
@@ -56,7 +56,7 @@ header .subtitle {
     color: var(--text-muted);
 }
 
-/* Main layout (FIXED: Side-by-side Grid) */
+/* Main layout (Side-by-side Grid) */
 main {
   flex-grow: 1;
   display: grid;
@@ -168,216 +168,225 @@ footer {
 
 <body>
 <header>
-  <div class="title">KeeWeb CSP Console <span class="subtitle">(AP CSP Relaxed)</span></div>
+  <div class="title">KeeWeb CSP Console <span class="subtitle">(AP CSP Relaxed)</span></div>
 </header>
 
 <main>
-  <section class="card">
-     <h2>Program</h2>
-    <div class="toolbar">
-      <button class="primary" id="runBtn">▶ Run</button>
-      <button id="stopBtn" class="danger">■ Stop</button>
-      <select id="samples"></select>
-      <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
-    </div>
-    <textarea id="editor"></textarea>
-  </section>
+  <section class="card">
+     <h2>Program</h2>
+    <div class="toolbar">
+      <button class="primary" id="runBtn">▶ Run</button>
+      <button id="stopBtn" class="danger">■ Stop</button>
+      <select id="samples"></select>
+      <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
+    </div>
+    <textarea id="editor"></textarea>
+  </section>
 
-  <section class="card">
-    <h2>Console</h2>
-    <div class="console" id="console"></div>
-    <div class="prompt-wrap" id="promptWrap">
-      <input id="promptInput" placeholder="Enter input…" />
-      <button id="promptOk">OK</button>
-      <button id="promptCancel">Cancel</button>
-    </div>
-    <div class="status" id="status">Idle</div>
-  </section>
+  <section class="card">
+    <h2>Console</h2>
+    <div class="console" id="console"></div>
+    <div class="prompt-wrap" id="promptWrap">
+      <input id="promptInput" placeholder="Enter input…" />
+      <button id="promptOk">OK</button>
+      <button id="promptCancel">Cancel</button>
+    </div>
+    <div class="status" id="status">Idle</div>
+  </section>
 </main>
 
 <footer>KeeWeb Inspired UI · AP CSP Emulator</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
-  const $ = s => document.querySelector(s);
+  const $ = s => document.querySelector(s);
 
-  // UI Elements
-  const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
-  const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
-  const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
-  let halted = false, inputResolve=null, inputReject=null;
+  // UI Elements
+  const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
+  const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
+  const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
+  let halted = false, inputResolve=null, inputReject=null;
 
-  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=String(m);logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-  const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
-  const setStatus = s => statusEl.textContent = s;
+  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=String(m);logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
+  const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
+  const setStatus = s => statusEl.textContent = s;
 
-  function showPrompt(label){ promptInput.value=""; promptInput.placeholder=label||"Input"; promptWrap.classList.add("show"); promptInput.focus(); return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;}); }
-  function hidePrompt(){ promptWrap.classList.remove("show"); }
-  promptOk.onclick=()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); } };
-  promptCancel.onclick=()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
-  promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
+  function showPrompt(label){ promptInput.value=""; promptInput.placeholder=label||"Input"; promptWrap.classList.add("show"); promptInput.focus(); return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;}); }
+  function hidePrompt(){ promptWrap.classList.remove("show"); }
+  promptOk.onclick=()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); } };
+  promptCancel.onclick=()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
+  promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
 
-  // ---------- Preprocess ----------
-  function preprocess(src){
-    return src.split(/\r?\n/).map((raw,idx)=>{
-      const s = raw
-        .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
-        .replace(/\t/g,"    ").trim(); 
-      return { idx, raw, s };
-    });
-  }
+  // ---------- Preprocess ----------
+  function preprocess(src){
+    return src.split(/\r?\n/).map((raw,idx)=>{
+      const s = raw
+        .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
+        .replace(/\t/g,"    ").trim(); 
+      return { idx, raw, s };
+    });
+  }
 
-  // ---------- Block map ----------
-  function buildBlocks(lines){
-    const blocks = { if:{}, repStartToEnd:{}, repEndToStart:{} };
-    const stack = [];
-    for (let i=0;i<lines.length;i++){
-      const t = lines[i].s;
-      if(!t) continue;
-      if(/^IF\b/i.test(t)) { stack.push({type:"IF", i}); }
-      else if(/^ELSE\b/i.test(t)) {
-        const top = stack.at(-1);
-        if(!top || top.type!=="IF") throw `ELSE without IF at line ${i+1}`;
-        blocks.if[top.i] = blocks.if[top.i] || {};
-        blocks.if[top.i].else = i;
-      }
-      else if(/^END\s*IF\b/i.test(t)) {
-        const top = stack.pop();
-        if(!top || top.type!=="IF") throw `END IF without IF at line ${i+1}`;
-        blocks.if[top.i] = blocks.if[top.i] || {};
-        blocks.if[top.i].end = i;
-      }
-      else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t)) { stack.push({type:"RT", i}); }
-      else if(/^REPEAT\s+UNTIL\b/i.test(t)) { stack.push({type:"RU", i}); }
-      else if(/^END\s*REPEAT\b/i.test(t)) {
-        const top = stack.pop();
-        if(!top || (top.type!=="RT" && top.type!=="RU")) throw `END REPEAT without REPEAT at line ${i+1}`;
-        blocks.repStartToEnd[top.i] = i;
-        blocks.repEndToStart[i] = top.i;
-      }
-    }
-    if(stack.length) throw `Unclosed block at line ${stack[0].i+1}`;
-    return blocks;
-  }
+  // ---------- Block map ----------
+  function buildBlocks(lines){
+    const blocks = { if:{}, repStartToEnd:{}, repEndToStart:{} };
+    const stack = [];
+    for (let i=0;i<lines.length;i++){
+      const t = lines[i].s;
+      if(!t) continue;
+      if(/^IF\b/i.test(t)) { stack.push({type:"IF", i}); }
+      else if(/^ELSE\b/i.test(t)) {
+        const top = stack.at(-1);
+        if(!top || top.type!=="IF") throw `ELSE without IF at line ${i+1}`;
+        blocks.if[top.i] = blocks.if[top.i] || {};
+        blocks.if[top.i].else = i;
+      }
+      else if(/^END\s*IF\b/i.test(t)) {
+        const top = stack.pop();
+        if(!top || top.type!=="IF") throw `END IF without IF at line ${i+1}`;
+        blocks.if[top.i] = blocks.if[top.i] || {};
+        blocks.if[top.i].end = i;
+      }
+      else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t)) { stack.push({type:"RT", i}); }
+      else if(/^REPEAT\s+UNTIL\b/i.test(t)) { stack.push({type:"RU", i}); }
+      else if(/^END\s*REPEAT\b/i.test(t)) {
+        const top = stack.pop();
+        if(!top || (top.type!=="RT" && top.type!=="RU")) throw `END REPEAT without REPEAT at line ${i+1}`;
+        blocks.repStartToEnd[top.i] = i;
+        blocks.repEndToStart[i] = top.i;
+      }
+    }
+    if(stack.length) throw `Unclosed block at line ${stack[0].i+1}`;
+    return blocks;
+  }
 
-  // ---------- Procedures table (FIXED closing brace logic) ----------
-  function parseProcedures(lines){
-    const procs = {};
-    let open = null;
-    for (let i=0;i<lines.length;i++){
-      const t = lines[i].s;
-      if(!t) continue;
-      if(/^PROCEDURE\b/i.test(t)){
-        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{?\s*$/i);
-        if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
-        if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`;
-        open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i+1, end: null };
-      } else if(/^END\s+PROCEDURE\b/i.test(t) || t.startsWith("}")){ // <--- FIX: use startsWith to catch "}\s*$"
-        if(!open) throw `${t} without PROCEDURE at line ${i+1}`;
-        open.end = i;
-        procs[open.name] = open;
-        open = null;
-      }
-    }
-    if(open) throw `Unclosed PROCEDURE '${open.name}' starting at line ${open.start}`;
-    return procs;
-  }
+  // ---------- Procedures table ----------
+  function parseProcedures(lines){
+    const procs = {};
+    let open = null;
+    for (let i=0;i<lines.length;i++){
+      const t = lines[i].s;
+      if(!t) continue;
+      if(/^PROCEDURE\b/i.test(t)){
+        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{?\s*$/i);
+        if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
+        if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`;
+        open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i+1, end: null };
+      } else if(/^END\s+PROCEDURE\b/i.test(t) || t.startsWith("}")){ 
+        if(!open) throw `${t} without PROCEDURE at line ${i+1}`;
+        open.end = i; // The line index of END PROCEDURE or }
+        procs[open.name] = open;
+        open = null;
+      }
+    }
+    if(open) throw `Unclosed PROCEDURE '${open.name}' starting at line ${open.start}`;
+    return procs;
+  }
 
-  // ---------- Expression evaluator (FIXED Proxy logic) ----------
-  function makeEval(env, procs){
-    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
-    function rewrite(expr){
-      return expr
-        .replace(/[“”]/g,'"')
-        .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
-        .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi, "LENGTH($1)")
-        .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
-    }
-    
-    // CORRECTED PROXY
-    const envWithProcs = new Proxy(env,{
-      get(t,p){
-        const name = String(p);
-        // FIX: Check for procedure name *first*
-        if (procs[name]) {
-          return async (...args)=> await callProc(name, args, env);
-        }
-        // If not a procedure, check the regular environment
-        if(p in t) return t[p]; 
-        return undefined;
-      }
-    });
+  // ---------- Expression evaluator (NEW, ROBUST IMPLEMENTATION) ----------
+  function makeEval(env, procs){
+    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
+    
+    function rewrite(expr){
+      return expr
+        .replace(/[“”]/g,'"')
+        .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
+        .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
+        .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi, "LENGTH($1)")
+        .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
+    }
 
-    async function callProc(name, args, callerEnv){
-      const def = procs[name];
-      if(!def) throw `Unknown procedure '${name}'`;
-      const local = Object.create(callerEnv);
-      for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
-      const result = await execRange(def.start, def.end, local, true);
-      return result.__ret ?? null;
-    }
+    async function callProc(name, args, callerEnv){
+      const def = procs[name];
+      if(!def) throw `Unknown procedure '${name}'`;
+      const local = Object.create(callerEnv);
+      for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
+      // Run from start line to *before* end line
+      const result = await execRange(def.start, def.end, local, true); 
+      return result.__ret ?? null;
+    }
 
-    return async function evalExpr(expr){
-      const e = rewrite(expr);
-      if(!safe.test(e)) throw "Expression contains unsupported characters";
-      const INPUT = async prompt => showPrompt(prompt||"Input");
-      const APPEND=(L,v)=>L.push(v), INSERT=(L,i,v)=>L.splice(i-1,0,v), REMOVE=(L,i)=>L.splice(i-1,1), LENGTH=L=>L.length, IDX=(L,i)=>L[(i|0)-1];
-      
-      const fn = new Function("env","Math","INPUT","APPEND","INSERT","REMOVE","LENGTH","IDX",
-        `with(env){ return ( ${e} ); }`);
-      
-      // The Proxy (envWithProcs) handles finding 'hello'
-      return await fn(envWithProcs, Math, INPUT, APPEND, INSERT, REMOVE, LENGTH, IDX);
-    };
-  }
+    return async function evalExpr(expr){
+      const e = rewrite(expr);
+      if(!safe.test(e)) throw "Expression contains unsupported characters";
 
-  // ---------- Globals for current program ----------
-  let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
+      // --- Build explicit scope ---
+      const scope = {
+          ...env, // All user-defined variables (e.g., x, i)
+          Math,
+          INPUT: async prompt => showPrompt(prompt||"Input"),
+          APPEND: (L,v)=>L.push(v),
+          INSERT: (L,i,v)=>L.splice(i-1,0,v),
+          REMOVE: (L,i)=>L.splice(i-1,1),
+          LENGTH: L=>L.length,
+          IDX: (L,i)=>L[(i|0)-1]
+      };
+      
+      // Add procedures to the scope
+      for (const name in procs) {
+          scope[name] = async (...args) => await callProc(name, args, env);
+      }
+      
+      const scopeKeys = Object.keys(scope);
+      const scopeValues = Object.values(scope);
 
-  // ---------- Executor ----------
-  async function execRange(start, end, env, insideProc=false){
-    const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
-    let i = start;
+      // Create function with explicit scope and no 'with'
+      const fn = new Function(...scopeKeys, `return ( ${e} );`);
+      return await fn(...scopeValues);
+    };
+  }
 
-    env.__times = env.__times || {};
+  // ---------- Globals for current program ----------
+  let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
 
-    while(i < end){
-      if(halted) return {__halt:true};
-      const {s, idx} = LINES[i];
-      i++;
+  // ---------- Executor ----------
+  async function execRange(start, end, env, insideProc=false){
+    const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
+    let i = start;
 
-      if(!s) continue;
+    env.__times = env.__times || {};
 
-      // Skip procedure bodies
-      if(/^PROCEDURE\b/i.test(s)){
-        const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
-        const name = m[1];
-        const def = PROCS[name];
-        i = (def.end + 1);
-        continue;
-      }
-      if(/^END\s+PROCEDURE\b/i.test(s) || s.startsWith("}")){ 
-        if(insideProc) return {__ret:null};
-        continue;
-      }
+    while(i < end){ // Loop until (but not including) the end line
+      if(halted) return {__halt:true};
+      const {s, idx} = LINES[i];
+      i++;
 
-      // DISPLAY(expr)
-      if(/^DISPLAY\s*\(/i.test(s)){
-        const m = s.match(/^DISPLAY\s*\((.*)\)\s*$/i);
-        if(!m) throw `DISPLAY syntax at line ${idx+1}`;
-        log(await evalExpr(m[1]));
-        continue;
-      }
+      if(!s) continue;
 
-      // SET x ← expr
-      if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
-        const m = s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
-        ENV[m[1]] = await evalExpr(m[2]);
-        continue;
-      }
-      
-      // IF/REPEAT logic (omitted for brevity, no changes)
+      // Skip procedure bodies
+      if(/^PROCEDURE\b/i.test(s)){
+        const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
+        const name = m[1];
+        const def = PROCS[name];
+        i = (def.end + 1); // Jump *past* the END PROCEDURE line
+        continue;
+      }
+      // Check for procedure end *inside* a procedure
+      if(insideProc && (s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s))){ 
+        return {__ret:null};
+      }
+      // Skip procedure end *outside* a procedure
+      if(!insideProc && (s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s))){ 
+        continue;
+      }
+
+      // DISPLAY(expr)
+      if(/^DISPLAY\s*\(/i.test(s)){
+        const m = s.match(/^DISPLAY\s*\((.*)\)\s*$/i);
+        if(!m) throw `DISPLAY syntax at line ${idx+1}`;
+        log(await evalExpr(m[1]));
+        continue;
+      }
+
+      // SET x ← expr
+      if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
+        const m = s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
+        // CRITICAL: Set variable in the GLOBAL env
+        ENV[m[1]] = await evalExpr(m[2]);
+        continue;
+      }
+      
+      // IF/REPEAT logic
       if(/^IF\b/i.test(s)){
         const cond = s.replace(/^IF\b/i,"").replace(/\bTHEN\b/i,"").trim();
         const ok = await evalExpr(cond);
@@ -413,57 +422,58 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
 
-      // CALL name(args)
-      if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s)){
-        await evalExpr(s.replace(/^CALL\s+/i, "")); 
-        continue;
-      }
+      // CALL name(args)
+      if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s)){
+        await evalExpr(s.replace(/^CALL\s+/i, "")); 
+        continue;
+      }
 
-      // Allow bare procedure calls as a statement
-      if(/^[A-Za-z_]\w*\s*\(/.test(s)){
-        const m = s.match(/^([A-Za-z_]\w*)\s*\(/);
-        if(PROCS[m[1]]){
-          await evalExpr(s);
-          continue;
-        }
-      }
+      // Allow bare procedure calls as a statement
+      if(/^[A-Za-z_]\w*\s*\(/.test(s)){
+        const m = s.match(/^([A-Za-z_]\w*)\s*\(/);
+        if(PROCS[m[1]]){
+          await evalExpr(s);
+          continue;
+        }
+      }
 
-      // INPUT or standalone closing brace
-      if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
-      if(s.startsWith("}")){ continue; }
+      // INPUT
+      if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
 
-      throw `Unknown statement at line ${idx+1}: ${s}`;
-    }
-    return {__ret:null};
-  }
+      throw `Unknown statement at line ${idx+1}: ${s}`;
+    }
+    // If loop finishes (e.g., inside proc call), return
+    return {__ret:null};
+  }
 
-  // ---------- Run (FIXED: Removed null placeholder) ----------
-  async function run(src){
-    halted=false; logEl.innerHTML=""; setStatus("Parsing…");
-    try{
-      LINES = preprocess(src);
-      BLOCKS = buildBlocks(LINES);
-      PROCS  = parseProcedures(LINES);
-      ENV = Object.create(null); // Keep ENV clean
-      EVAL = makeEval(ENV, PROCS);
-    }catch(e){ err(e); setStatus("Crashed"); return; }
+  // ---------- Run ----------
+  async function run(src){
+    halted=false; logEl.innerHTML=""; setStatus("Parsing…");
+    try{
+      LINES = preprocess(src);
+      BLOCKS = buildBlocks(LINES);
+      PROCS  = parseProcedures(LINES);
+      ENV = Object.create(null); // Global env is clean
+      EVAL = makeEval(ENV, PROCS);
+    }catch(e){ err(e); setStatus("Crashed"); return; }
 
-    setStatus("Running…");
-    try{
-      await execRange(0, LINES.length, ENV, false);
-      setStatus("Finished");
-    }catch(e){ err(e); setStatus("Crashed"); }
-  }
+    setStatus("Running…");
+    try{
+      // Run from top to bottom
+      await execRange(0, LINES.length, ENV, false);
+      setStatus("Finished");
+    }catch(e){ err(e); setStatus("Crashed"); }
+  }
 
-  // ---------- UI ----------
-  $("#runBtn").onclick = ()=> run(editor.value);
-  $("#stopBtn").onclick = ()=> { halted=true; setStatus("Stopping…"); };
-  document.addEventListener("keydown", e=>{
-    if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
-  });
+  // ---------- UI ----------
+  $("#runBtn").onclick = ()=> run(editor.value);
+  $("#stopBtn").onclick = ()=> { halted=true; setStatus("Stopping…"); };
+  document.addEventListener("keydown", e=>{
+    if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
+  });
 
-  // Samples
-  const samples = {
+  // Samples
+  const samples = {
 "AP CSP: Hello World (Standard)":
 `PROCEDURE hello()
   DISPLAY("hello")
@@ -472,24 +482,23 @@ END PROCEDURE
 CALL hello()`,
 
 "AP CSP: Hello World (Relaxed Braces)":
-`PROCEDURE hello() {
+`PROCEDHURE hello() {
   DISPLAY("hello")
 }
 
 hello()`
-  };
+  };
 
-  const sel = $("#samples");
-  sel.innerHTML = '<option value="">Load sample…</option>' +
-    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
-  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
+  const sel = $("#samples");
+  sel.innerHTML = '<option value="">Load sample…</option>' +
+    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
+  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
-  // Start with the working AP CSP sample
-  editor.value = samples["AP CSP: Hello World (Standard)"];
+  // Start with the working AP CSP sample
+  editor.value = samples["AP CSP: Hello World (Standard)"];
 
-  setStatus("Ready"); sys("Emulator loaded. Aesthetic and function verified.");
+  setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
 });
 </script>
 </body>
 </html>
-```
