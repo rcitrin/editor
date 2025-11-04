@@ -212,21 +212,16 @@ window.addEventListener("DOMContentLoaded", () => {
   promptCancel.onclick=()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
   promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
 
-  // ---------- Preprocess ----------
+  // ---------- Preprocess (FIXED: Removed same-line brace logic) ----------
   function preprocess(src){
     return src.split(/\r?\n/).map((raw,idx)=>{
       const s = raw
         .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
         .replace(/\t/g,"    ").trim(); 
-      // Split lines like IF (...) {
-      if (/^(IF|REPEAT|FOR EACH|PROCEDURE)\s*.*\)\s*\{$/.test(s)) {
-        return [
-          { idx, raw, s: s.substring(0, s.length - 1).trim() },
-          { idx, raw, s: "{" }
-        ];
-      }
+      // Simply return the trimmed line.
       return { idx, raw, s };
-    }).flat();
+    });
+    // No .flat() needed anymore
   }
 
   // ---------- Block map (NEW: Brace-based) ----------
@@ -259,12 +254,17 @@ window.addEventListener("DOMContentLoaded", () => {
         
         // Find what block this { belonged to
         const blockStartLine = openBraceLine - 1;
-        const blockStartLineText = lines[blockStartLine].s;
+        // Handle blank lines between command and brace
+        let tempStartLine = blockStartLine;
+        while(tempStartLine > 0 && lines[tempStartLine].s === "") {
+          tempStartLine--;
+        }
+        const blockStartLineText = lines[tempStartLine].s;
 
         if (/^ELSE/i.test(blockStartLineText)) {
-          blocks.elseEnd[blockStartLine] = i;
+          blocks.elseEnd[tempStartLine] = i;
         } else if (/^REPEAT/i.test(blockStartLineText) || /^FOR EACH/i.test(blockStartLineText)) {
-          blocks.loopStart[openBraceLine] = blockStartLine;
+          blocks.loopStart[openBraceLine] = tempStartLine;
         }
       }
     }
@@ -280,16 +280,17 @@ window.addEventListener("DOMContentLoaded", () => {
       const t = lines[i].s;
       if(!t) continue;
       if(/^PROCEDURE\b/i.test(t)){
-        // FIX: Regex now allows for { on same line
-        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{?$/i);
+        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
         if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
-        // FIX: Typo here. Was: `if(open) throw ... (line ${i+1}\`;`
         if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`; 
         open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i + 1, end: null };
       } else if(t === "{") {
-          // This is the start of the proc body, do nothing
+          if (open && open.start === i) {
+            // This { is for the procedure
+            open.start = i + 1; // Body starts *after* the brace
+          }
       } else if(t === "}") {
-        if(open) {
+        if(open && open.end === null) {
           open.end = i; // The line index of }
           procs[open.name] = open;
           open = null;
@@ -321,7 +322,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const local = Object.create(callerEnv);
       for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
       // Run from start line (after {) to *before* end line (})
-      const result = await execRange(def.start + 1, def.end, local, true); 
+      const result = await execRange(def.start, def.end, local, true); 
       return result.__ret ?? null;
     }
 
@@ -392,7 +393,7 @@ window.addEventListener("DOMContentLoaded", () => {
         i = (def.end + 1); // Jump *past* the } line
         continue;
       }
-
+      
       // Handle RETURN statement
       if(/^RETURN\s*\((.*)\)/i.test(s)){
         if(!insideProc) throw `RETURN statement outside of a PROCEDURE at line ${idx+1}`;
@@ -515,6 +516,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // } (Closing brace)
       if(s === "}") {
+        if (insideProc) {
+            return {__ret: null}; // Implicit return at end of procedure
+        }
+        
         const openBraceLine = Object.keys(BLOCKS.braceMatch).find(k => BLOCKS.braceMatch[k] === idx);
         if (openBraceLine) {
             const startLineIdx = BLOCKS.loopStart[openBraceLine];
@@ -535,7 +540,7 @@ window.addEventListener("DOMContentLoaded", () => {
               }
             }
         }
-        // If it's an IF or PROC }, do nothing, just continue
+        // If it's an IF/ELSE }, do nothing, just continue
         continue;
       }
 
