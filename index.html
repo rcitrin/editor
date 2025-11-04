@@ -339,7 +339,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---------- Globals for current program ----------
   let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
 
-  // ---------- Executor ----------
+  // ---------- Executor (FIXED: Added RETURN logic) ----------
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
@@ -353,22 +353,36 @@ window.addEventListener("DOMContentLoaded", () => {
 
       if(!s) continue;
 
-      // Skip procedure bodies
-      if(/^PROCEDURE\b/i.test(s)){
+      // Skip procedure bodies (top level)
+      if(!insideProc && /^PROCEDURE\b/i.test(s)){
         const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
         const name = m[1];
         const def = PROCS[name];
         i = (def.end + 1); // Jump *past* the END PROCEDURE line
         continue;
       }
-      // Check for procedure end *inside* a procedure
-      if(insideProc && (s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s))){ 
-        return {__ret:null};
+      // Check for procedure end
+      if(s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s)){ 
+        if(insideProc) {
+          return {__ret:null}; // End of procedure, return null implicitly
+        }
+        continue; // Skip at top level
       }
-      // Skip procedure end *outside* a procedure
-      if(!insideProc && (s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s))){ 
-        continue;
+      
+      // **** NEW: Handle RETURN statement ****
+      if(/^RETURN\b/i.test(s)){
+        if(!insideProc) {
+          throw `RETURN statement found outside of a PROCEDURE at line ${idx+1}`;
+        }
+        const expr = s.replace(/^RETURN\b/i, "").trim();
+        if (!expr) {
+          return {__ret: null}; // Return nothing
+        }
+        // Evaluate and return the value
+        const returnValue = await evalExpr(expr);
+        return {__ret: returnValue};
       }
+      // **************************************
 
       // DISPLAY(expr)
       if(/^DISPLAY\s*\(/i.test(s)){
@@ -482,11 +496,18 @@ END PROCEDURE
 CALL hello()`,
 
 "AP CSP: Hello World (Relaxed Braces)":
-`PROCEDHURE hello() {
+`PROCEDURE hello() {
   DISPLAY("hello")
 }
 
-hello()`
+hello()`,
+
+"AP CSP: Return Value":
+`PROCEDURE payCalc(hours, rate) {
+  RETURN (hours * rate)
+}
+
+DISPLAY(payCalc(40, 40))`
   };
 
   const sel = $("#samples");
@@ -494,8 +515,8 @@ hello()`
     Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
   sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
-  // Start with the working AP CSP sample
-  editor.value = samples["AP CSP: Hello World (Standard)"];
+  // Start with the return sample
+  editor.value = samples["AP CSP: Return Value"];
 
   setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
 });
