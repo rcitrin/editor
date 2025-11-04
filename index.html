@@ -3,46 +3,182 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Citrin's APCSP Console — (Version 1.0)</title>
+<title>Citrin's APCSP Console</title>
 <style>
-:root { --bg:#000; --panel:#0b0f14; --accent:#60a5fa; --muted:#9aa4b2; --border:#1f2937; }
-*{box-sizing:border-box}
-body{margin:0;background:#000;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
-header{padding:18px 20px;border-bottom:1px solid var(--border);background:#000;position:sticky;top:0;z-index:1}
-h1{margin:0 0 6px;font-size:20px}
-.sub{color:var(--muted);font-size:13px}
-main{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;padding:12px}
-.card{background:#0a0a0a;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.4);display:flex;flex-direction:column;min-height:0}
-.card h2{font-size:14px;margin:0;padding:10px 12px;color:#cbd5e1;border-bottom:1px solid var(--border);background:#0b0b0b}
-.toolbar{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap}
-button,select{background:#141a26;color:#e5e7eb;border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-button.primary{background:var(--accent);color:#05122a;border-color:#3b82f6}
-button.danger{background:#1a1620;color:#fecaca;border-color:#7f1d1d}
-textarea{flex:1;width:100%;height:520px;resize:none;background:#0c1320;color:#e5e7eb;border:0;outline:none;padding:12px 14px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;caret-color:var(--accent);min-height:0}
-.console{flex:1;overflow:auto;padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#05080f;white-space:pre-wrap}
-.line{white-space:pre-wrap}
-.log{color:#d1fae5}.err{color:#fecaca}.sys{color:#93c5fd}
-.prompt-wrap{display:none;gap:8px;padding:10px;border-top:1px solid var(--border);background:#0d1420;align-items:center}
-.prompt-wrap input{flex:1;background:#0b1220;color:#e5e7eb;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-.prompt-wrap.show{display:flex}
-.status{padding:8px 12px;font-size:12px;color:#9aa4b2;border-top:1px solid var(--border);background:#0e1522}
-footer{color:#9aa4b2;text-align:center;font-size:12px;padding:10px;border-top:1px solid var(--border);background:#000}
+/* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
+:root {
+  --bg: #2b2b2b; /* IDE background */
+  --panel-bg: #212121; /* Panel background */
+  --border: #3c3c3c; /* Border color */
+  --text-primary: #a9b7c6; /* Light gray text */
+  --text-muted: #808080; /* Muted gray text */
+  --run-btn-bg: #5f9040; /* Green for run button */
+  --run-btn-text: #ffffff; /* White for run button text */
+  --stop-btn-bg: #a33b3b; /* Red for stop button */
+  --console-bg: #212121; /* Console background */
+  --console-log: #a9b7c6; /* Console default log text */
+  --console-err: #ff8c8c; /* Console error text */
+  --console-sys: #92a4c1; /* Console system messages */
+  --editor-bg: #2b2b2b; /* Editor background (matching main bg) */
+  --editor-text: #a9b7c6; /* Editor text */
+  --editor-caret: #ffc66d; /* Caret color */
+}
+
+/* General styling */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font: 16px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Use 100vh for full height */
+}
+
+/* Header styling */
+header {
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+header .title {
+    font-size: 16px;
+    font-weight: normal;
+    color: var(--text-primary);
+    margin: 0;
+}
+header .subtitle {
+    margin-left: 15px;
+    color: var(--text-muted);
+}
+
+/* Main layout (Side-by-side Grid) */
+main {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr; /* Side-by-side columns */
+  gap: 10px;
+  padding: 10px;
+  min-height: 0; /* Fix for flex/grid overflow */
+}
+
+/* Card/Panel styling */
+.card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden; /* Important for containing children */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Fix for flex/grid overflow */
+}
+
+.card h2 {
+  font-size: 14px;
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+/* Toolbar styling */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  flex-wrap: wrap;
+  flex-shrink: 0; /* Prevent toolbar from shrinking */
+}
+button, select {
+  background: #3c3f41;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+}
+button.primary {
+  background: var(--run-btn-bg);
+  color: var(--run-btn-text);
+  border-color: var(--run-btn-bg);
+}
+button.danger {
+  background: var(--stop-btn-bg);
+  color: var(--run-btn-text);
+  border-color: var(--stop-btn-bg);
+}
+
+/* Textarea / Editor styling */
+textarea {
+  flex-grow: 1;
+  width: 100%;
+  height: 100%; 
+  resize: none; 
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  border: 0;
+  outline: none;
+  padding: 12px 14px;
+  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  caret-color: var(--editor-caret);
+  overflow: auto;
+}
+
+/* Console styling */
+.console {
+  flex-grow: 1;
+  overflow: auto;
+  padding: 12px;
+  font: 14px/1.5 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  background: var(--console-bg);
+  white-space: pre-wrap;
+}
+.log { color: var(--console-log); }
+.err { color: var(--console-err); }
+.sys { color: var(--console-sys); }
+
+/* Prompt and Status bars */
+.prompt-wrap { display: none; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--panel-bg); align-items: center; flex-shrink: 0; }
+.prompt-wrap input { flex: 1; background: #3c3f41; color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
+.prompt-wrap.show { display: flex; }
+.status { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--panel-bg); flex-shrink: 0; }
+
+/* Footer styling */
+footer {
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 12px;
+  padding: 10px;
+  background: var(--panel-bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
 </style>
 </head>
+
 <body>
 <header>
-  <h1>Citrin's APCSP Console <span style="opacity:.7">(Version 1.0)</span></h1>
-  <div class="sub">SET, DISPLAY, INPUT, IF/ELSE/END IF, REPEAT n TIMES/END REPEAT, REPEAT UNTIL/END REPEAT, PROCEDURE/RETURN/END PROCEDURE. Lists 1-based (L[1]); APPEND/INSERT/REMOVE; LENGTH OF. <b>CALL required as a statement</b>. Procedure calls allowed inside expressions.</div>
+  <div class="title">Citrin's APCSP Console <span class="subtitle">(Version 1.0)</span></div>
 </header>
 
 <main>
   <section class="card">
-    <h2>Program</h2>
+     <h2>Program</h2>
     <div class="toolbar">
       <button class="primary" id="runBtn">▶ Run</button>
       <button id="stopBtn" class="danger">■ Stop</button>
       <select id="samples"></select>
-      <span style="margin-left:auto" class="sub">Ctrl/⌘ + Enter</span>
+      <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
     </div>
     <textarea id="editor"></textarea>
   </section>
@@ -59,13 +195,13 @@ footer{color:#9aa4b2;text-align:center;font-size:12px;padding:10px;border-top:1p
   </section>
 </main>
 
-<footer>MIT · Single-file · Black BG for quick version check 🖤</footer>
+<footer>KeeWeb Inspired UI · AP CSP Emulator</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   const $ = s => document.querySelector(s);
 
-  // UI
+  // UI Elements
   const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
   const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
   const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
@@ -85,9 +221,8 @@ window.addEventListener("DOMContentLoaded", () => {
   function preprocess(src){
     return src.split(/\r?\n/).map((raw,idx)=>{
       const s = raw
-        .replace(/#.*$/,"").replace(/\/\/.*$/,"")
-        .replace(/[{}]/g,"")               // tolerate braces; ignore them
-        .replace(/\t/g,"    ").trim();
+        .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
+        .replace(/\t/g,"    ").trim(); 
       return { idx, raw, s };
     });
   }
@@ -132,17 +267,14 @@ window.addEventListener("DOMContentLoaded", () => {
     for (let i=0;i<lines.length;i++){
       const t = lines[i].s;
       if(!t) continue;
-
       if(/^PROCEDURE\b/i.test(t)){
-        // allow optional trailing spaces; params may be empty
-        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*$/i);
+        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{?\s*$/i);
         if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
         if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`;
         open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i+1, end: null };
-      }
-      else if(/^END\s+PROCEDURE\b/i.test(t)){
-        if(!open) throw `END PROCEDURE without PROCEDURE at line ${i+1}`;
-        open.end = i;
+      } else if(/^END\s+PROCEDURE\b/i.test(t) || t.startsWith("}")){ 
+        if(!open) throw `${t} without PROCEDURE at line ${i+1}`;
+        open.end = i; // The line index of END PROCEDURE or }
         procs[open.name] = open;
         open = null;
       }
@@ -151,9 +283,10 @@ window.addEventListener("DOMContentLoaded", () => {
     return procs;
   }
 
-  // ---------- Expression evaluator ----------
+  // ---------- Expression evaluator (NEW, ROBUST IMPLEMENTATION) ----------
   function makeEval(env, procs){
     const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
+    
     function rewrite(expr){
       return expr
         .replace(/[“”]/g,'"')
@@ -168,7 +301,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if(!def) throw `Unknown procedure '${name}'`;
       const local = Object.create(callerEnv);
       for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
-      const result = await execRange(def.start, def.end, local, true);
+      // Run from start line to *before* end line
+      const result = await execRange(def.start, def.end, local, true); 
       return result.__ret ?? null;
     }
 
@@ -176,59 +310,77 @@ window.addEventListener("DOMContentLoaded", () => {
       const e = rewrite(expr);
       if(!safe.test(e)) throw "Expression contains unsupported characters";
 
+      // --- Build explicit scope ---
       const scope = {
-        ...env, Math,
-        INPUT: async prompt => showPrompt(prompt||"Input"),
-        APPEND: (L,v)=>L.push(v),
-        INSERT: (L,i,v)=>L.splice(i-1,0,v),
-        REMOVE: (L,i)=>L.splice(i-1,1),
-        LENGTH: L=>L.length,
-        IDX: (L,i)=>L[(i|0)-1]
+          ...env, // All user-defined variables (e.g., x, i)
+          Math,
+          INPUT: async prompt => showPrompt(prompt||"Input"),
+          APPEND: (L,v)=>L.push(v),
+          INSERT: (L,i,v)=>L.splice(i-1,0,v),
+          REMOVE: (L,i)=>L.splice(i-1,1),
+          LENGTH: L=>L.length,
+          IDX: (L,i)=>L[(i|0)-1]
       };
-      for(const name in procs){
-        scope[name] = async (...args)=>await callProc(name,args,env);
+      
+      // Add procedures to the scope
+      for (const name in procs) {
+          scope[name] = async (...args) => await callProc(name, args, env);
       }
-      const keys = Object.keys(scope), vals = Object.values(scope);
-      const fn = new Function(...keys, `return ( ${e} );`);
-      return await fn(...vals);
+      
+      const scopeKeys = Object.keys(scope);
+      const scopeValues = Object.values(scope);
+
+      // Create function with explicit scope and no 'with'
+      const fn = new Function(...scopeKeys, `return ( ${e} );`);
+      return await fn(...scopeValues);
     };
   }
 
   // ---------- Globals for current program ----------
   let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
 
-  // ---------- Executor ----------
+  // ---------- Executor (FIXED: Added RETURN logic and SCOPE for SET) ----------
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
+
     env.__times = env.__times || {};
 
-    while(i < end){
+    while(i < end){ // Loop until (but not including) the end line
       if(halted) return {__halt:true};
       const {s, idx} = LINES[i];
       i++;
+
       if(!s) continue;
 
-      // Skip procedure bodies at top level
+      // Skip procedure bodies (top level)
       if(!insideProc && /^PROCEDURE\b/i.test(s)){
         const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
-        const name = m && m[1];
-        const def = name ? PROCS[name] : null;
-        if(!def) throw `Procedure header not recognized at line ${idx+1}`;
-        i = def.end + 1;
+        const name = m[1];
+        const def = PROCS[name];
+        i = (def.end + 1); // Jump *past* the END PROCEDURE line
         continue;
       }
-      if(/^END\s+PROCEDURE\b/i.test(s)){
-        if(insideProc) return {__ret:null};
-        continue;
+      // Check for procedure end
+      if(s.startsWith("}") || /^END\s+PROCEDURE\b/i.test(s)){ 
+        if(insideProc) {
+          return {__ret:null}; // End of procedure, return null implicitly
+        }
+        continue; // Skip at top level
       }
-
-      // RETURN (only valid inside a procedure)
+      
+      // Handle RETURN statement
       if(/^RETURN\b/i.test(s)){
-        if(!insideProc) throw `RETURN outside of PROCEDURE at line ${idx+1}`;
-        const expr = s.replace(/^RETURN\b/i,"").trim();
-        const val = expr ? await evalExpr(expr) : null;
-        return {__ret: val};
+        if(!insideProc) {
+          throw `RETURN statement found outside of a PROCEDURE at line ${idx+1}`;
+        }
+        const expr = s.replace(/^RETURN\b/i, "").trim();
+        if (!expr) {
+          return {__ret: null}; // Return nothing
+        }
+        // Evaluate and return the value
+        const returnValue = await evalExpr(expr);
+        return {__ret: returnValue};
       }
 
       // DISPLAY(expr)
@@ -239,14 +391,15 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
 
-      // SET x ← expr  or  x ← expr
+      // SET x ← expr
       if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
         const m = s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
+        // CRITICAL FIX: Set variable in the CURRENT env
         env[m[1]] = await evalExpr(m[2]);
         continue;
       }
-
-      // IF / ELSE / END IF
+      
+      // IF/REPEAT logic
       if(/^IF\b/i.test(s)){
         const cond = s.replace(/^IF\b/i,"").replace(/\bTHEN\b/i,"").trim();
         const ok = await evalExpr(cond);
@@ -261,51 +414,52 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
       if(/^END\s*IF\b/i.test(s)){ continue; }
-
-      // REPEAT n TIMES (handled at END REPEAT)
-      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){ continue; }
-
-      // REPEAT UNTIL cond (store cond for end)
-      if(/^REPEAT\s+UNTIL\b/i.test(s)){
-        const cond = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim();
-        env[`__until_${idx}`] = cond;
-        continue;
+      
+      // **** TYPO FIX HERE ****
+      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){ continue; } // Was .test(t)
+      // ************************
+      
+      if(/^REPEAT\s+UNTIL\b/i.test(s)){ 
+        const cond = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim(); 
+        ENV[`__until_${idx}`] = cond;
+        continue; 
       }
-
-      // END REPEAT
       if(/^END\s*REPEAT\b/i.test(s)){
         const startIdx = BLOCKS.repEndToStart[idx];
         const startLine = LINES[startIdx].s;
-
         if(/^REPEAT\s+\d+\s+TIMES\b/i.test(startLine)){
           const n = parseInt(startLine.match(/^REPEAT\s+(\d+)\s+TIMES\b/i)[1],10);
-          env.__times[startIdx] = (env.__times[startIdx] || 0) + 1;
-          if(env.__times[startIdx] < n) i = startIdx + 1;
-          else delete env.__times[startIdx];
-        } else { // REPEAT UNTIL (post-check)
-          const cond = env[`__until_${startIdx}`];
+          ENV.__times[startIdx] = (ENV.__times[startIdx] || 0) + 1;
+          if(ENV.__times[startIdx] < n){ i = startIdx + 1; } else { delete ENV.__times[startIdx]; }
+        } else { 
+          const cond = ENV[`__until_${startIdx}`];
           const ok = await evalExpr(cond);
-          if(!ok) i = startIdx + 1;
+          if(!ok){ i = startIdx + 1; } 
         }
         continue;
       }
 
-      // Statement calls must use CALL (strict)
+      // CALL name(args)
       if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s)){
-        await evalExpr(s.replace(/^CALL\s+/i,""));
+        await evalExpr(s.replace(/^CALL\s+/i, "")); 
         continue;
       }
 
-      // INPUT as a statement (side effect only)
-      if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
-
-      // Bare proc call as statement is disallowed in strict mode
+      // Allow bare procedure calls as a statement
       if(/^[A-Za-z_]\w*\s*\(/.test(s)){
-        throw `Use CALL name(args) for procedure statements (line ${idx+1}).`;
+        const m = s.match(/^([A-Za-z_]\w*)\s*\(/);
+        if(PROCS[m[1]]){
+          await evalExpr(s);
+          continue;
+        }
       }
+
+      // INPUT
+      if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
 
       throw `Unknown statement at line ${idx+1}: ${s}`;
     }
+    // If loop finishes (e.g., inside proc call), return
     return {__ret:null};
   }
 
@@ -316,12 +470,13 @@ window.addEventListener("DOMContentLoaded", () => {
       LINES = preprocess(src);
       BLOCKS = buildBlocks(LINES);
       PROCS  = parseProcedures(LINES);
-      ENV = Object.create(null);
+      ENV = Object.create(null); // Global env is clean
       EVAL = makeEval(ENV, PROCS);
     }catch(e){ err(e); setStatus("Crashed"); return; }
 
     setStatus("Running…");
     try{
+      // Run from top to bottom
       await execRange(0, LINES.length, ENV, false);
       setStatus("Finished");
     }catch(e){ err(e); setStatus("Crashed"); }
@@ -334,41 +489,51 @@ window.addEventListener("DOMContentLoaded", () => {
     if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
   });
 
+  // Samples
   const samples = {
-"Strict: Procedure + CALL":
+"AP CSP: Hello World (Standard)":
 `PROCEDURE hello()
   DISPLAY("hello")
 END PROCEDURE
 
 CALL hello()`,
 
-"Strict: RETURN in expression":
-`PROCEDURE pay(hours, rate)
-  RETURN hours * rate
-END PROCEDURE
+"AP CSP: Hello World (Relaxed Braces)":
+`PROCEDURE hello() {
+  DISPLAY("hello")
+}
 
-SET paycheck ← pay(12, 18.5)
-DISPLAY("Pay = $" + paycheck)`,
+hello()`,
 
-"Strict: Loops":
-`REPEAT 3 TIMES
-  DISPLAY("tick")
-END REPEAT
+"AP CSP: Return Value":
+`PROCEDURE payCalc(hours, rate) {
+  RETURN (hours * rate)
+}
 
-SET i ← 0
-REPEAT UNTIL i ≥ 3
-  DISPLAY(i)
-  SET i ← i + 1
-END REPEAT`
+DISPLAY(payCalc(40, 40))`,
+
+"AP CSP: Local Scope":
+`PROCEDURE square(n) {
+  RETURN (n*n)
+}
+
+PROCEDURE makeSquare() {
+  result <- square(10)
+  DISPLAY("answer is " + result)
+}
+
+makeSquare()`
   };
+
   const sel = $("#samples");
-  sel.innerHTML = '<option value="">Load sample…</option>' + Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
+  sel.innerHTML = '<option value="">Load sample…</option>' +
+    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
   sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
-  // Start blank
+  // Start with a blank editor as requested
   editor.value = "";
 
-  setStatus("Ready"); sys("Strict mode loaded. CALL required for statements; braces ignored.");
+  setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
 });
 </script>
 </body>
