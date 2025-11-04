@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Citrin's CSP Console</title>
+<title>KeeWeb CSP Console (Final Fix)</title>
 <style>
 /* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
 :root {
@@ -414,7 +414,11 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
       if(/^END\s*IF\b/i.test(s)){ continue; }
-      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t)){ continue; } // Use 't' here, or 's' (it's the same)
+      
+      // **** TYPO FIX HERE ****
+      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){ continue; } // Was .test(t)
+      // ************************
+      
       if(/^REPEAT\s+UNTIL\b/i.test(s)){ 
         const cond = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim(); 
         ENV[`__until_${idx}`] = cond;
@@ -526,8 +530,8 @@ makeSquare()`
     Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
   sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
-  // Start with the return sample
-  editor.value = samples["AP CSP: Local Scope"];
+  // Start with a blank editor as requested
+  editor.value = "";
 
   setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
 });
