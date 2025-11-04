@@ -1,352 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TechBoston CSP Console — Strict AP CSP</title>
-  <style>
-    :root { --bg:#000; --panel:#0a0a0a; --accent:#60a5fa; --muted:#93a0ad; --border:#1f2937; }
-    *{box-sizing:border-box}
-    body{margin:0;background:#000;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
-    header{padding:18px 20px;border-bottom:1px solid var(--border);background:#000;position:sticky;top:0;z-index:1}
-    h1{margin:0 0 6px;font-size:20px}
-    .sub{color:var(--muted);font-size:13px}
-    main{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:16px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.4)}
-    .card h2{font-size:14px;margin:0;padding:10px 12px;color:#cbd5e1;border-bottom:1px solid var(--border);background:#0b0b0b}
-    .toolbar{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap}
-    button,select{background:#141a26;color:#e5e7eb;border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-    button.primary{background:var(--accent);color:#061327;border-color:#3b82f6}
-    button.danger{background:#1a1620;color:#fecaca;border-color:#7f1d1d}
-    textarea{width:100%;height:520px;resize:vertical;background:#0c1320;color:#e5e7eb;border:0;outline:none;padding:12px 14px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;caret-color:var(--accent)}
-    .console{height:560px;overflow:auto;padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#05080f}
-    .line{white-space:pre-wrap}
-    .log{color:#d1fae5}.err{color:#fecaca}.sys{color:#93c5fd}
-    .status{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#0e1522}
-    .kbd{padding:1px 6px;border:1px solid #334155;border-bottom-width:3px;border-radius:6px;background:#0b1220;font:12px ui-monospace,monospace;color:#cbd5e1}
-    .prompt-wrap{display:none;gap:8px;padding:10px;border-top:1px solid var(--border);background:#0d1420}
-    .prompt-wrap input{flex:1;background:#0b1220;color:#e5e7eb;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-    .prompt-wrap.show{display:flex}
-    footer{color:var(--muted);text-align:center;font-size:12px;padding:10px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TechBoston CSP Console — Teacher-Sane APCSP</title>
+<style>
+:root { --bg:#000; --panel:#0b0f14; --accent:#60a5fa; --muted:#9aa4b2; --border:#1f2937; }
+*{box-sizing:border-box}
+body{margin:0;background:#CC3300;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
+header{padding:18px 20px;border-bottom:1px solid var(--border);background:#000;position:sticky;top:0;z-index:1}
+h1{margin:0 0 6px;font-size:20px}
+.sub{color:var(--muted);font-size:13px}
+main{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:16px}
+.card{background:#0a0a0a;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+.card h2{font-size:14px;margin:0;padding:10px 12px;color:#cbd5e1;border-bottom:1px solid var(--border);background:#0b0b0b}
+.toolbar{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap}
+button,select{background:#141a26;color:#e5e7eb;border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);color:#05122a;border-color:#3b82f6}
+button.danger{background:#1a1620;color:#fecaca;border-color:#7f1d1d}
+textarea{width:100%;height:520px;resize:vertical;background:#0c1320;color:#e5e7eb;border:0;outline:none;padding:12px 14px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;caret-color:var(--accent)}
+.console{height:560px;overflow:auto;padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#05080f}
+.line{white-space:pre-wrap}
+.log{color:#d1fae5}.err{color:#fecaca}.sys{color:#93c5fd}
+.status{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#0e1522}
+.kbd{padding:1px 6px;border:1px solid #334155;border-bottom-width:3px;border-radius:6px;background:#0b1220;font:12px ui-monospace,monospace;color:#cbd5e1}
+.prompt-wrap{display:none;gap:8px;padding:10px;border-top:1px solid var(--border);background:#0d1420}
+.prompt-wrap input{flex:1;background:#0b1220;color:#e5e7eb;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.prompt-wrap.show{display:flex}
+footer{color:var(--muted);text-align:center;font-size:12px;padding:10px}
+</style>
 </head>
+
 <body>
-  <header>
-    <h1>TechBoston CSP Console <span style="opacity:.7">(Strict AP CSP)</span></h1>
-    <div class="sub">
-      SET, DISPLAY, INPUT, IF/ELSE/END IF, REPEAT n TIMES/END REPEAT, REPEAT UNTIL/END REPEAT,
-      PROCEDURE/RETURN/END PROCEDURE, Lists (1-based), APPEND/INSERT/REMOVE, LENGTH OF.
-      Operators: = ≠ &lt; ≤ &gt; ≥, AND/OR/NOT. Calls: <b>CALL name(args)</b> as a statement; <b>name(args)</b> in expressions.
+<header>
+  <h1>TechBoston CSP Console <span style="opacity:.7">(Teacher-Sane APCSP)</span></h1>
+  <div class="sub">
+    SET, DISPLAY, INPUT, IF/ELSE/END IF, REPEAT/END REPEAT, PROCEDURE/RETURN,
+    lists (1-based), APPEND/INSERT/REMOVE, LENGTH OF.
+    CALL optional. Braces ignored. Strings in quotes.
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Program</h2>
+    <div class="toolbar">
+      <button class="primary" id="runBtn">▶ Run</button>
+      <button id="stopBtn" class="danger">■ Stop</button>
+      <select id="samples"></select>
+      <span style="margin-left:auto"></span>
+      <span class="sub">Ctrl/⌘ + Enter</span>
     </div>
-  </header>
+    <textarea id="editor"></textarea>
+  </section>
 
-  <main>
-    <section class="card">
-      <h2>Program</h2>
-      <div class="toolbar">
-        <button class="primary" id="runBtn">▶ Run</button>
-        <button id="stopBtn" class="danger">■ Stop</button>
-        <select id="samples"></select>
-        <span style="margin-left:auto"></span>
-        <span class="sub">Tip: <span class="kbd">Ctrl</span>/<span class="kbd">⌘</span> + <span class="kbd">Enter</span></span>
-      </div>
-      <textarea id="editor"></textarea>
-    </section>
+  <section class="card">
+    <h2>Console</h2>
+    <div class="console" id="console"></div>
+    <div class="prompt-wrap" id="promptWrap">
+      <input id="promptInput" placeholder="Enter input…" />
+      <button id="promptOk">OK</button>
+      <button id="promptCancel">Cancel</button>
+    </div>
+    <div class="status" id="status">Idle</div>
+  </section>
+</main>
 
-    <section class="card">
-      <h2>Console</h2>
-      <div class="console" id="console"></div>
-      <div class="prompt-wrap" id="promptWrap">
-        <input id="promptInput" placeholder="Enter input…" />
-        <button id="promptOk">OK</button>
-        <button id="promptCancel">Cancel</button>
-      </div>
-      <div class="status" id="status">Idle</div>
-    </section>
-  </main>
-  <footer>MIT · Single-file · BG is BLACK 🖤</footer>
+<footer>MIT · Single-file · Built for students 🧠⚙️</footer>
 
-  <script>
-  // ================== TechBoston APCSP Interpreter (Strict Mode) ==================
-  window.addEventListener("DOMContentLoaded", () => {
-    const $ = s => document.querySelector(s);
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const $ = s => document.querySelector(s);
+  const logEl=$("#console"), statusEl=$("#status"), editor=$("#editor");
+  const promptWrap=$("#promptWrap"), promptInput=$("#promptInput");
+  const promptOk=$("#promptOk"), promptCancel=$("#promptCancel");
+  let halted=false, inputResolve=null,inputReject=null;
 
-    // UI
-    const logEl = $("#console"), statusEl = $("#status");
-    const runBtn = $("#runBtn"), stopBtn = $("#stopBtn"), editor = $("#editor");
-    const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
-    const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
-    const samplesSel = $("#samples");
+  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=m;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
+  const log=m=>out(m,"log"), err=m=>out(m,"err"), setStatus=s=>statusEl.textContent=s;
+  const showPrompt=msg=>{promptInput.value="";promptInput.placeholder=msg||"Input";promptWrap.classList.add("show");promptInput.focus();return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;});}
+  const hidePrompt=()=>promptWrap.classList.remove("show");
+  promptOk.onclick=()=>{if(inputResolve)inputResolve(promptInput.value);hidePrompt();}
+  promptCancel.onclick=()=>{if(inputReject)inputReject("cancel");hidePrompt();}
+  promptInput.onkeydown=e=>{if(e.key==="Enter")promptOk.click();if(e.key==="Escape")promptCancel.click();}
 
-    let halted = false, inputResolve=null, inputReject=null;
+  function preprocess(src){
+    return src.split(/\r?\n/).map((raw,idx)=>{
+      const s=raw.replace(/#.*$/,"").replace(/\/\/.*$/,"").replace(/[{}]/g,"").trim();
+      return { raw,s,idx };
+    });
+  }
 
-    // Console helpers
-    function out(msg, cls="log"){ const d=document.createElement("div"); d.className="line "+cls; d.textContent=String(msg); logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
-    const log = m=>out(m,"log"), sys=m=>out(m,"sys"), err=m=>out(m,"err");
-    const clearConsole = ()=> logEl.innerHTML = "";
-    const setStatus = s => statusEl.textContent = s;
-
-    // INPUT UI
-    function showPrompt(label){ promptInput.value=""; promptInput.placeholder=label||"Input"; promptWrap.classList.add("show"); promptInput.focus(); return new Promise((res,rej)=>{ inputResolve=res; inputReject=rej; });}
-    function hidePrompt(){ promptWrap.classList.remove("show"); }
-    promptOk.onclick = ()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); } };
-    promptCancel.onclick = ()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
-    promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
-
-    // ---------- preprocess ----------
-    function preprocess(src){
-      return src.split(/\r?\n/).map((raw, idx)=>{
-        const s = raw
-          .replace(/[\u200B-\u200D\uFEFF]/g,"")
-          .replace(/#.*$/,"")
-          .replace(/\/\/.*$/,"")
-          .trim();
-        return { idx, raw, s };
-      });
+  function buildBlocks(lines){
+    const stack=[],blocks={};
+    for(let i=0;i<lines.length;i++){
+      const t=lines[i].s;
+      if(/^IF\b/i.test(t))stack.push({type:"IF",i});
+      else if(/^ELSE\b/i.test(t)){const top=stack.at(-1);blocks[top.i].else=i;}
+      else if(/^END\s*IF\b/i.test(t)){const top=stack.pop();blocks[top.i].end=i;}
+      else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t))stack.push({type:"RT",i});
+      else if(/^REPEAT\s+UNTIL\b/i.test(t))stack.push({type:"RU",i});
+      else if(/^END\s*REPEAT\b/i.test(t)){const top=stack.pop();blocks[top.i]={end:i};}
     }
+    return blocks;
+  }
 
-    // ---------- block map (IF/REPEAT) ----------
-    function buildBlocks(lines){
-      const stack=[]; const blocks={};
-      for(let i=0;i<lines.length;i++){
-        const t=lines[i].s; if(!t) continue;
-        if(/^IF\b/i.test(t)) stack.push({type:"IF",i});
-        else if(/^ELSE\b/i.test(t)){ const top=stack.at(-1); if(!top||top.type!=="IF") throw `ELSE without IF at line ${i+1}`; (blocks[top.i]??={}).else=i; }
-        else if(/^END\s*IF\b/i.test(t)){ const top=stack.pop(); if(!top||top.type!=="IF") throw `END IF without IF at line ${i+1}`; (blocks[top.i]??={}).end=i; }
-        else if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t)) stack.push({type:"RT",i});
-        else if(/^REPEAT\s+UNTIL\b/i.test(t)) stack.push({type:"RU",i});
-        else if(/^END\s*REPEAT\b/i.test(t)){ const top=stack.pop(); if(!top) throw `END REPEAT without REPEAT at line ${i+1}`; (blocks[top.i]??={}).end=i; }
+  function parseProcedures(lines){
+    const procs={};let cur=null;
+    for(let i=0;i<lines.length;i++){
+      const t=lines[i].s;
+      if(/^PROCEDURE\b/i.test(t)){
+        const m=t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\((.*)\)/i);
+        cur={name:m[1],params:(m[2]||"").split(",").map(x=>x.trim()).filter(Boolean),start:i+1};
       }
-      if(stack.length) throw `Unclosed block at line ${stack[0].i+1}`;
-      return blocks;
+      if(/^END\s+PROCEDURE/i.test(t)){cur.end=i;procs[cur.name]=cur;cur=null;}
     }
-    function findUp(lines, from, regex){ for(let k=from-1;k>=0;k--) if(regex.test(lines[k].s)) return k; return -1; }
+    return procs;
+  }
 
-    // ---------- procedure table ----------
-    function parseProcedures(lines){
-      const procs={}; let cur=null;
-      for(let i=0;i<lines.length;i++){
-        const t=lines[i].s; if(!t) continue;
-        if(/^PROCEDURE\b/i.test(t)){
-          const m=t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\((.*)\)/i);
-          if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
-          cur={name:m[1], params:(m[2]||"").split(",").map(s=>s.trim()).filter(Boolean), start:i+1, end:null};
-        } else if(/^END\s+PROCEDURE\b/i.test(t)){
-          if(!cur) throw `END PROCEDURE without PROCEDURE at line ${i+1}`;
-          cur.end=i; procs[cur.name]=cur; cur=null;
-        }
-      }
-      return procs;
+  function makeEval(env,procs,lines,blocks){
+    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
+    const rewrite=expr=>expr
+      .replace(/[“”]/g,'"').replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
+      .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
+      .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi,"LENGTH($1)")
+      .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g,"IDX($1,($2))");
+    const envProxy=new Proxy(env,{get(t,p){if(p in t)return t[p];if(procs[p])return async(...a)=>callProc(p,a);}});
+    async function callProc(name,args){
+      const p=procs[name],local=Object.create(env);
+      p.params.forEach((v,i)=>local[v]=args[i]);
+      return (await exec(p.start,p.end,lines,blocks,procs,local,true)).__ret;
     }
-
-    // ---------- expression evaluator ----------
-    function makeEval(env, procs, lines, blocks){
-      const safe = /^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:]+$/u;
-      function rewrite(expr){
-        let e = expr
-          .replace(/[“”]/g,'"')
-          .replace(/≤/g,"<=")
-          .replace(/≥/g,">=")
-          .replace(/≠/g,"!=")
-          .replace(/\bAND\b/gi,"&&")
-          .replace(/\bOR\b/gi,"||")
-          .replace(/\bNOT\b/gi,"!")
-          .replace(/\bLENGTH\s+OF\s+([A-Za-z_]\w*)/gi,"LENGTH($1)")
-          .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g,"IDX($1,($2))"); // 1-based index
-        if(!safe.test(e)) throw "Expression contains unsupported characters";
-        return e;
-      }
-
-      // expose procedures in expressions as async functions
-      const envWithProcs = new Proxy(env, {
-        get(target, prop){
-          if(prop in target) return target[prop];
-          const name = String(prop);
-          if(procs[name]){
-            return async function(...args){ return await callProcedure(name, args, env); };
-          }
-          return undefined;
-        }
-      });
-
-      async function callProcedure(name, argVals, callerEnv){
-        const def = procs[name];
-        if(!def) throw `Unknown procedure ${name}`;
-        const local = Object.create(callerEnv);
-        for(let i=0;i<def.params.length;i++) local[def.params[i]] = argVals[i];
-        const result = await execRange(def.start, def.end, lines, blocks, procs, local, true);
-        return result?.__ret ?? null;
-      }
-
-      return async function evalExpr(expr){
-        const e = rewrite(expr);
-        const INPUT = async prompt => showPrompt(prompt||"Input");
-        const APPEND = (list, v)=> list.push(v);
-        const INSERT = (list, i, v)=> list.splice(i-1, 0, v);
-        const REMOVE = (list, i)=> list.splice(i-1, 1);
-        const LENGTH = (list)=> list.length;
-        const IDX = (list, i)=> list[(i|0)-1]; // 1-based
-        const fn = new Function("env","Math","INPUT","APPEND","INSERT","REMOVE","LENGTH","IDX",
-          `with(env){ return ( ${e} ); }`);
-        return await fn(envWithProcs, Math, INPUT, APPEND, INSERT, REMOVE, LENGTH, IDX);
-      };
-    }
-
-    // ---------- executor ----------
-    async function execRange(start, end, lines, blocks, procs, env, insideProc=false){
-      const evalExpr = makeEval(env, procs, lines, blocks);
-      let i=start; let retVal=undefined; let steps=0;
-
-      while(i<end){
-        if(halted) return {__halt:true};
-        if(++steps>60000) throw "Program aborted: too many steps (infinite loop?)";
-        const {s, idx} = lines[i]; i++;
-        if(!s) continue;
-
-        // Skip procedure bodies at top level (they're parsed, callable later)
-        if(/^PROCEDURE\b/i.test(s)){ const m=s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i); const p=procs[m[1]]; i = (p?.end ?? i-1) + 1; continue; }
-        if(/^END\s+PROCEDURE\b/i.test(s)){ if(insideProc) return {__ret:retVal}; else continue; }
-
-        // DISPLAY(expr)
-        if(/^DISPLAY\s*\(/i.test(s)){ const m=s.match(/^DISPLAY\s*\((.*)\)\s*$/i); if(!m) throw `DISPLAY syntax at line ${idx+1}`; log(await evalExpr(m[1])); continue; }
-
-        // SET name ← expr
-        if(/^SET\b/i.test(s)){
-          const m=s.match(/^SET\s+([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
-          if(!m) throw `Bad SET syntax at line ${idx+1}`;
-          env[m[1]] = await evalExpr(m[2]); continue;
-        }
-
-        // IF / ELSE / END IF
-        if(/^IF\b/i.test(s)){ const cond=s.replace(/^IF\b/i,"").replace(/\bTHEN\b/i,"").trim(); const ok=await evalExpr(cond); const meta=blocks[idx]; if(!meta) throw `IF without END IF at line ${idx+1}`; if(!ok) i = (meta.else!=null? meta.else+1 : meta.end+1); continue; }
-        if(/^ELSE\b/i.test(s)){ const startIf=findUp(lines, idx, /^IF\b/i); i = blocks[startIf].end + 1; continue; }
-        if(/^END\s*IF\b/i.test(s)){ continue; }
-
-        // REPEAT n TIMES
-        if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){
-          const m=s.match(/^REPEAT\s+(\d+)\s+TIMES/i); const count=+m[1]; const meta=blocks[idx];
-          if(!meta) throw `REPEAT TIMES without END REPEAT at line ${idx+1}`;
-          env[`_c${idx}`] ??= 0; env[`_c${idx}`]++;
-          if(env[`_c${idx}`] > count){ delete env[`_c${idx}`]; i = meta.end + 1; }
-          continue;
-        }
-
-        // REPEAT UNTIL
-        if(/^REPEAT\s+UNTIL\b/i.test(s)){ env[`_u${idx}`] = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim(); continue; }
-        if(/^END\s*REPEAT\b/i.test(s)){ const startR=findUp(lines, idx, /^REPEAT\b/i); if(/^REPEAT\s+UNTIL\b/i.test(lines[startR].s)){ const cond=env[`_u${startR}`]; const ok=await evalExpr(cond); if(!ok){ i = startR + 1; } } continue; }
-
-        // List verbs as statements
-        if(/^APPEND\s*\(/i.test(s) || /^INSERT\s*\(/i.test(s) || /^REMOVE\s*\(/i.test(s) || /^LENGTH\s*\(/i.test(s) || /\bLENGTH\s+OF\b/i.test(s)){
-          // If not assigned or displayed, still evaluate for side effect
-          await evalExpr(s); continue;
-        }
-
-        // CALL name(args) — required as a statement in Strict mode
-        if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s)){
-          const call = s.replace(/^CALL\s+/i,"");
-          await evalExpr(call); // value discarded
-          continue;
-        }
-
-        // RETURN (only valid inside procedures)
-        if(/^RETURN\b/i.test(s)){ if(!insideProc) throw `RETURN outside of PROCEDURE at line ${idx+1}`; const expr=s.replace(/^RETURN\b/i,"").trim(); retVal = expr? await evalExpr(expr):null; return {__ret:retVal}; }
-
-        // Standalone INPUT line allowed (value discarded)
-        if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
-
-        // Strict mode: disallow bare assignment without SET, or bare calls without CALL
-        throw `Unknown or disallowed statement at line ${idx+1}: ${s}`;
-      }
-      return {__ret:retVal};
-    }
-
-    // ---------- run ----------
-    async function run(src){
-      halted=false; clearConsole(); setStatus("Parsing…");
-      const lines = preprocess(src);
-      let blocks, procs;
-      try{
-        blocks = buildBlocks(lines);
-        procs  = parseProcedures(lines);
-      }catch(e){ err(e); setStatus("Crashed"); return; }
-
-      const env = Object.create(null);
-      setStatus("Running…");
-      try{
-        await execRange(0, lines.length, lines, blocks, procs, env, false);
-        setStatus("Finished");
-      }catch(e){
-        err(e); setStatus("Crashed");
-      }
-    }
-
-    // UI wire
-    runBtn.onclick = ()=> run(editor.value);
-    stopBtn.onclick = ()=> { halted=true; setStatus("Stopping…"); };
-    document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); runBtn.click(); }});
-
-    // Samples (Strict mode)
-    const samples = {
-"Hello + INPUT":
-`DISPLAY("What is your name?")
-SET name ← INPUT("name")
-DISPLAY("Hello, " + name)`,
-
-"Procedure + RETURN":
-`PROCEDURE pay(hours, rate)
-  RETURN hours * rate
-END PROCEDURE
-
-SET h ← 12
-SET r ← 18.5
-SET paycheck ← pay(h, r)
-DISPLAY("Pay = $" + paycheck)`,
-
-"CALL statement":
-`PROCEDURE shout(msg)
-  DISPLAY(">> " + msg)
-END PROCEDURE
-
-CALL shout("TechBoston!")`,
-
-"Lists (1-based)":
-`SET L ← [10, 20, 30]
-DISPLAY(LENGTH OF L)     # 3
-DISPLAY(L[1])            # 10
-APPEND(L, 40)
-INSERT(L, 2, 15)         # L = [10,15,20,30,40]
-REMOVE(L, 3)             # remove 20
-DISPLAY(LENGTH(L))       # 4
-DISPLAY(L[4])`,
-
-"IF + Loops":
-`SET i ← 0
-REPEAT UNTIL i ≥ 5
-  IF i = 3
-    DISPLAY("three")
-  ELSE
-    DISPLAY(i)
-  END IF
-  SET i ← i + 1
-END REPEAT`,
-
-"Return in expression":
-`PROCEDURE add(a, b)
-  RETURN a + b
-END PROCEDURE
-
-SET z ← add(7, 5) * 2
-DISPLAY(z)`
+    return async expr=>{
+      const e=rewrite(expr);if(!safe.test(e))throw "Bad expression";
+      const INPUT=async p=>showPrompt(p||"Input"),APPEND=(l,v)=>l.push(v),INSERT=(l,i,v)=>l.splice(i-1,0,v),REMOVE=(l,i)=>l.splice(i-1,1),LENGTH=l=>l.length,IDX=(l,i)=>l[(i|0)-1];
+      return await (new Function("env","Math","INPUT","APPEND","INSERT","REMOVE","LENGTH","IDX",`with(env){return(${e})}`))(envProxy,Math,INPUT,APPEND,INSERT,REMOVE,LENGTH,IDX);
     };
+  }
 
-    samplesSel.innerHTML = '<option value="">Load sample…</option>' +
-      Object.keys(samples).map(k=>`<option value="${k}">${k}</option>`).join('');
-    samplesSel.onchange = ()=>{ const k=samplesSel.value; if(samples[k]) editor.value=samples[k]; samplesSel.value=""; };
+  async function exec(start,end,lines,blocks,procs,env,inside){
+    const evalExpr=makeEval(env,procs,lines,blocks);
+    let i=start;
+    while(i<end){
+      if(halted)return;
+      const {s,idx}=lines[i++];
+      if(!s)continue;
+      if(/^PROCEDURE\b/i.test(s)){i=procs[s.split(/\s+/)[1].split("(")[0]].end+1;continue;}
+      if(/^END\s+PROCEDURE/i.test(s)){if(inside)return;}
+      if(/^DISPLAY\s*\(/i.test(s)){log(await evalExpr(s.slice(7)));continue;}
+      if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
+        const m=s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);env[m[1]]=await evalExpr(m[2]);continue;}
+      if(/^IF\b/i.test(s)){const cond=s.replace(/^IF\b/i,"").replace(/THEN/i,"");const ok=await evalExpr(cond);const meta=blocks[idx];if(!ok)i=(meta.else??meta.end)+1;continue;}
+      if(/^ELSE\b/i.test(s)){i=blocks[lines.findIndex(l=>l.idx<idx&&/^IF\b/i.test(l.s))].end+1;continue;}
+      if(/^END\s*IF/i.test(s))continue;
+      if(/^REPEAT\s+\d+\s+TIMES/i.test(s)){const m=s.match(/REPEAT\s+(\d+)/);env[`c${idx}`]??=0;env[`c${idx}`]++;if(env[`c${idx}`]>+m[1]){delete env[`c${idx}`];i=blocks[idx].end+1;}continue;}
+      if(/^REPEAT\s+UNTIL/i.test(s)){env[`u${idx}`]=s.replace(/^REPEAT\s+UNTIL/i,"");continue;}
+      if(/^END\s*REPEAT/i.test(s)){const j=lines.findIndex((l,k)=>k<idx&&/^REPEAT\b/i.test(l.s));if(/^REPEAT\s+UNTIL/i.test(lines[j].s)){const ok=await evalExpr(env[`u${j}`]);if(!ok)i=j+1;}continue;}
+      if(/^CALL\b/i.test(s)){await evalExpr(s.replace(/^CALL\s+/i,""));continue;}
+      if(/^[A-Za-z_]\w*\s*\(/.test(s)){await evalExpr(s);continue;}
+      if(/^INPUT\s*\(/i.test(s)){await evalExpr(s);continue;}
+      throw `Unknown statement at line ${idx+1}: ${s}`;
+    }
+    return {};
+  }
 
-    // Default
-    editor.value = samples["Procedure + RETURN"];
-    setStatus("Ready"); sys("Strict AP CSP build. Black background.");
-  });
-  </script>
+  async function run(src){
+    halted=false;logEl.innerHTML="";setStatus("Running…");
+    const lines=preprocess(src),blocks=buildBlocks(lines),procs=parseProcedures(lines),env=Object.create(null);
+    try{await exec(0,lines.length,lines,blocks,procs,env,false);setStatus("Done");}catch(e){err(e);setStatus("Crashed");}
+  }
+
+  $("#runBtn").onclick=()=>run(editor.value);
+  $("#stopBtn").onclick=()=>{halted=true;setStatus("Stopping…");};
+  document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")$("#runBtn").click();});
+
+  const samples={
+    "Hello & input":`DISPLAY("Your name?")\nSET n ← INPUT("name")\nDISPLAY("Hi " + n)`,
+    "Procedure & return":`PROCEDURE pay(h, r)\n  RETURN h * r\nEND PROCEDURE\n\nSET x ← pay(10,15)\nDISPLAY(x)\nCALL pay(2,3)`
+  };
+
+  $("#samples").innerHTML='<option value="">Load sample…</option>'+
+    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
+  $("#samples").onchange=e=>{const k=e.target.value;if(samples[k])editor.value=samples[k];e.target.value="";};
+
+  // 🚨 THIS IS THE LINE YOU ASKED FOR 🚨
+  editor.value = "";   // start blank
+
+  setStatus("Ready");
+});
+</script>
 </body>
 </html>
