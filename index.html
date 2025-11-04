@@ -386,14 +386,13 @@ window.addEventListener("DOMContentLoaded", () => {
         const val = await evalExpr(expr);
         
         // **** SCOPE FIX ****
-        // Search from current env outwards.
         let targetEnv = env;
         while(targetEnv) {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                break; // Found it in a scope
+                break; 
             }
             if (targetEnv === ENV) {
-                targetEnv = null; // Reached global, not found
+                targetEnv = null; 
                 break;
             }
             targetEnv = Object.getPrototypeOf(targetEnv);
@@ -489,14 +488,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // } (Closing brace)
       if(s === "}") {
-        if (insideProc) {
-            return {__ret: null}; // Implicit return at end of procedure
-        }
+        // This } could be for an IF, ELSE, REPEAT, or FOR EACH
+        // A procedure's closing } is handled by the `while(i < end)` boundary
         
         const openBraceLine = Object.keys(BLOCKS.braceMatch).find(k => BLOCKS.braceMatch[k] === idx);
+        
         if (openBraceLine) {
             const startLineIdx = BLOCKS.loopStart[openBraceLine];
             if (startLineIdx != null) {
+              // This is a loop's }
               const startLine = LINES[startLineIdx].s;
               
               if (/^REPEAT\s+UNTIL/i.test(startLine)) {
@@ -510,8 +510,12 @@ window.addEventListener("DOMContentLoaded", () => {
               } else if (/^FOR EACH/i.test(startLine)) {
                 i = startLineIdx; // Jump back to FOR EACH line
               }
+              continue; // We've handled the loop logic
             }
         }
+        
+        // If it wasn't a loop's }, it must be an IF/ELSE's }.
+        // In that case, just continue.
         continue;
       }
 
