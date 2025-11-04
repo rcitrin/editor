@@ -339,7 +339,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---------- Globals for current program ----------
   let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
 
-  // ---------- Executor (FIXED: Added RETURN logic) ----------
+  // ---------- Executor (FIXED: Added RETURN logic and SCOPE for SET) ----------
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
@@ -369,7 +369,7 @@ window.addEventListener("DOMContentLoaded", () => {
         continue; // Skip at top level
       }
       
-      // **** NEW: Handle RETURN statement ****
+      // Handle RETURN statement
       if(/^RETURN\b/i.test(s)){
         if(!insideProc) {
           throw `RETURN statement found outside of a PROCEDURE at line ${idx+1}`;
@@ -382,7 +382,6 @@ window.addEventListener("DOMContentLoaded", () => {
         const returnValue = await evalExpr(expr);
         return {__ret: returnValue};
       }
-      // **************************************
 
       // DISPLAY(expr)
       if(/^DISPLAY\s*\(/i.test(s)){
@@ -395,8 +394,8 @@ window.addEventListener("DOMContentLoaded", () => {
       // SET x ← expr
       if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
         const m = s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
-        // CRITICAL: Set variable in the GLOBAL env
-        ENV[m[1]] = await evalExpr(m[2]);
+        // CRITICAL FIX: Set variable in the CURRENT env
+        env[m[1]] = await evalExpr(m[2]);
         continue;
       }
       
@@ -415,7 +414,7 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
       if(/^END\s*IF\b/i.test(s)){ continue; }
-      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){ continue; }
+      if(/^REPEAT\s+\d+\s+TIMES\b/i.test(t)){ continue; } // Use 't' here, or 's' (it's the same)
       if(/^REPEAT\s+UNTIL\b/i.test(s)){ 
         const cond = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim(); 
         ENV[`__until_${idx}`] = cond;
@@ -507,7 +506,19 @@ hello()`,
   RETURN (hours * rate)
 }
 
-DISPLAY(payCalc(40, 40))`
+DISPLAY(payCalc(40, 40))`,
+
+"AP CSP: Local Scope":
+`PROCEDURE square(n) {
+  RETURN (n*n)
+}
+
+PROCEDURE makeSquare() {
+  result <- square(10)
+  DISPLAY("answer is " + result)
+}
+
+makeSquare()`
   };
 
   const sel = $("#samples");
@@ -516,7 +527,7 @@ DISPLAY(payCalc(40, 40))`
   sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
   // Start with the return sample
-  editor.value = samples["AP CSP: Return Value"];
+  editor.value = samples["AP CSP: Local Scope"];
 
   setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
 });
