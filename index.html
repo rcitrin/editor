@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Citrin's APCSP Console</title>
 <style>
-/* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
 :root {
   --bg: #1e1e1e;
   --panel-bg: #252526;
@@ -23,8 +22,6 @@
   --editor-text: #d4d4d4;
   --editor-caret: #aeafad;
 }
-
-/* General styling */
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -35,8 +32,6 @@ body {
   flex-direction: column;
   height: 100vh;
 }
-
-/* Header styling */
 header {
   padding: 10px 15px;
   border-bottom: 1px solid var(--border);
@@ -50,8 +45,6 @@ header span {
   font-weight: normal;
   color: var(--text-muted);
 }
-
-/* Main layout (Side-by-side Grid) */
 main {
   flex-grow: 1;
   display: grid;
@@ -60,8 +53,6 @@ main {
   padding: 10px;
   min-height: 0;
 }
-
-/* Card/Panel styling */
 .card {
   background: var(--panel-bg);
   border: 1px solid var(--border);
@@ -71,7 +62,6 @@ main {
   flex-direction: column;
   min-height: 0;
 }
-
 .card h2 {
   font-size: 14px;
   margin: 0;
@@ -81,8 +71,6 @@ main {
   background: #333333;
   flex-shrink: 0;
 }
-
-/* Toolbar styling */
 .toolbar {
   display: flex;
   gap: 8px;
@@ -112,8 +100,6 @@ button.danger {
   color: var(--run-btn-text);
   border-color: var(--stop-btn-bg);
 }
-
-/* Textarea / Editor styling */
 textarea {
   flex-grow: 1;
   width: 100%;
@@ -128,8 +114,6 @@ textarea {
   caret-color: var(--editor-caret);
   overflow: auto;
 }
-
-/* Console styling */
 .console {
   flex-grow: 1;
   overflow: auto;
@@ -141,14 +125,10 @@ textarea {
 .log { color: var(--console-log); }
 .err { color: var(--console-err); }
 .sys { color: var(--console-sys); }
-
-/* Prompt and Status bars */
 .prompt-wrap { display: none; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--panel-bg); align-items: center; flex-shrink: 0; }
 .prompt-wrap input { flex: 1; background: #3c3f41; color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
 .prompt-wrap.show { display: flex; }
 .status { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--panel-bg); flex-shrink: 0; }
-
-/* Footer styling */
 footer {
   color: var(--text-muted);
   text-align: center;
@@ -224,7 +204,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // No .flat() needed anymore
   }
 
-  // ---------- Block map (NEW: Brace-based) ----------
+  // ---------- Block map (Brace-based) ----------
   function buildBlocks(lines){
     const blocks = {
       braceMatch: {}, // maps { line -> } line
@@ -252,10 +232,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (openBraceLine == null) throw `} without { at line ${i + 1}`;
         blocks.braceMatch[openBraceLine] = i;
         
-        // Find what block this { belonged to
-        const blockStartLine = openBraceLine - 1;
-        // Handle blank lines between command and brace
-        let tempStartLine = blockStartLine;
+        let tempStartLine = openBraceLine - 1;
         while(tempStartLine > 0 && lines[tempStartLine].s === "") {
           tempStartLine--;
         }
@@ -302,16 +279,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Expression evaluator (All fixes applied) ----------
   function makeEval(env, procs){
-    // FIX: Added & and | to the safe regex
     const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:&|]+$/u;
     
     function rewrite(expr){
       return expr
         .replace(/[“”]/g,'"')
         .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        // FIX: Made replacements case-sensitive (removed /gi)
         .replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/\bNOT\b/g,"!")
-        // Use official LENGTH(aList) syntax
         .replace(/\bLENGTH\s*\(([^)]+)\)/gi, "LENGTH($1)")
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
     }
@@ -321,7 +295,6 @@ window.addEventListener("DOMContentLoaded", () => {
       if(!def) throw `Unknown procedure '${name}'`;
       const local = Object.create(callerEnv);
       for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
-      // Run from start line (after {) to *before* end line (})
       const result = await execRange(def.start, def.end, local, true); 
       return result.__ret ?? null;
     }
@@ -332,10 +305,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // --- Build explicit scope ---
       const scope = {
-          ...env, // All user-defined variables (e.g., x, i)
+          ...env, 
           Math,
           RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-          INPUT: async () => showPrompt("Input"), // Added ()
+          INPUT: async () => showPrompt("Input"), 
           APPEND: (L,v)=>{ if(!Array.isArray(L)) throw "APPEND target is not a list"; L.push(v); },
           INSERT: (L,i,v)=>{ if(!Array.isArray(L)) throw "INSERT target is not a list"; L.splice(i-1,0,v); },
           REMOVE: (L,i)=>{ if(!Array.isArray(L)) throw "REMOVE target is not a list"; L.splice(i-1,1); },
@@ -348,7 +321,6 @@ window.addEventListener("DOMContentLoaded", () => {
           }
       };
       
-      // Add procedures to the scope
       for (const name in procs) {
           scope[name] = async (...args) => await callProc(name, args, env);
       }
@@ -356,8 +328,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      // Create function with explicit scope and no 'with'
-      // Need to handle MOD separately as % is different
       const body = `
         const MOD = (a, b) => a % b;
         return ( ${e} );
@@ -375,7 +345,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
     
-    // For loop counters
     env.__times = env.__times || {};
     env.__forEach = env.__forEach || {};
 
@@ -384,6 +353,10 @@ window.addEventListener("DOMContentLoaded", () => {
       const {s, idx} = LINES[i];
       i++;
       if(!s) continue;
+      
+      // **** ONE-LINE FIX HERE ****
+      if(s === "{") { continue; } // Skip opening braces
+      // ***************************
 
       // Skip procedure bodies (top level)
       if(!insideProc && /^PROCEDURE\b/i.test(s)){
@@ -393,7 +366,7 @@ window.addEventListener("DOMContentLoaded", () => {
         i = (def.end + 1); // Jump *past* the } line
         continue;
       }
-      
+
       // Handle RETURN statement
       if(/^RETURN\s*\((.*)\)/i.test(s)){
         if(!insideProc) throw `RETURN statement outside of a PROCEDURE at line ${idx+1}`;
@@ -417,16 +390,15 @@ window.addEventListener("DOMContentLoaded", () => {
         const expr = m[2];
         const val = await evalExpr(expr);
         
-        // Find which env this var lives in
         let targetEnv = env;
         while(targetEnv) {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                break; // Found it in an outer scope
+                break; 
             }
-            if (targetEnv === ENV) break; // Reached global scope
+            if (targetEnv === ENV) break; 
             targetEnv = Object.getPrototypeOf(targetEnv);
         }
-        if (!targetEnv) targetEnv = env; // Not found, set in local
+        if (!targetEnv) targetEnv = env; 
         
         targetEnv[varName] = val;
         continue;
@@ -436,7 +408,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if(/^IF\s*\((.*)\)/i.test(s)){
         const cond = s.match(/^IF\s*\((.*)\)/i)[1];
         const ok = await evalExpr(cond);
-        const nextLine = LINES[i].s; // Check for {
+        const nextLine = LINES[i].s; 
         if (nextLine !== "{") throw `IF at line ${idx+1} must be followed by {`;
         
         const endBrace = BLOCKS.braceMatch[i];
@@ -471,7 +443,6 @@ window.addEventListener("DOMContentLoaded", () => {
         env.__times[i] = count;
         
         if (count > n) {
-          // Loop finished
           delete env.__times[i];
           i = BLOCKS.braceMatch[i] + 1; // Jump past }
         }
@@ -482,7 +453,6 @@ window.addEventListener("DOMContentLoaded", () => {
       if(/^REPEAT\s+UNTIL\s*\((.*)\)/i.test(s)) {
         const nextLine = LINES[i].s;
         if (nextLine !== "{") throw `REPEAT UNTIL at line ${idx+1} must be followed by {`;
-        // This is the start line, just continue. Logic is at }
         continue;
       }
       
@@ -495,20 +465,18 @@ window.addEventListener("DOMContentLoaded", () => {
         const nextLine = LINES[i].s;
         if (nextLine !== "{") throw `FOR EACH at line ${idx+1} must be followed by {`;
 
-        // Get loop state
         const state = env.__forEach[i] || { index: 0, list: null };
         if (state.list === null) {
-          state.list = await evalExpr(listVar); // Evaluate list only once
+          state.list = await evalExpr(listVar); 
         }
         
         if (state.index < state.list.length) {
-          env[itemVar] = state.list[state.index]; // Set itemVar
+          env[itemVar] = state.list[state.index]; 
           state.index++;
-          env.__forEach[i] = state; // Save state
+          env.__forEach[i] = state; 
         } else {
-          // Loop finished
           delete env.__forEach[i];
-          delete env[itemVar]; // Clean up
+          delete env[itemVar]; 
           i = BLOCKS.braceMatch[i] + 1; // Jump past }
         }
         continue;
@@ -524,7 +492,6 @@ window.addEventListener("DOMContentLoaded", () => {
         if (openBraceLine) {
             const startLineIdx = BLOCKS.loopStart[openBraceLine];
             if (startLineIdx != null) {
-              // This is a loop's }
               const startLine = LINES[startLineIdx].s;
               
               if (/^REPEAT\s+UNTIL/i.test(startLine)) {
@@ -540,13 +507,12 @@ window.addEventListener("DOMContentLoaded", () => {
               }
             }
         }
-        // If it's an IF/ELSE }, do nothing, just continue
         continue;
       }
 
       // List operations
       if(/^(APPEND|INSERT|REMOVE)\s*\(/.test(s)) {
-        await evalExpr(s); // Run as a statement
+        await evalExpr(s); 
         continue;
       }
       
