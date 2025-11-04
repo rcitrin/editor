@@ -192,13 +192,12 @@ window.addEventListener("DOMContentLoaded", () => {
   promptCancel.onclick=()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
   promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
 
-  // ---------- Preprocess (FIXED: Removed same-line brace logic) ----------
+  // ---------- Preprocess ----------
   function preprocess(src){
     return src.split(/\r?\n/).map((raw,idx)=>{
       const s = raw
         .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
         .replace(/\t/g,"    ").trim(); 
-      // Simply return the trimmed line.
       return { idx, raw, s };
     });
   }
@@ -262,7 +261,6 @@ window.addEventListener("DOMContentLoaded", () => {
         open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i + 1, end: null };
       } else if(t === "{") {
           if (open && open.start === i) {
-            // This { is for the procedure
             open.start = i + 1; // Body starts *after* the brace
           }
       } else if(t === "}") {
@@ -353,9 +351,7 @@ window.addEventListener("DOMContentLoaded", () => {
       i++;
       if(!s) continue;
       
-      // **** ONE-LINE FIX HERE ****
       if(s === "{") { continue; } // Skip opening braces
-      // ***************************
 
       // Skip procedure bodies (top level)
       if(!insideProc && /^PROCEDURE\b/i.test(s)){
@@ -389,17 +385,27 @@ window.addEventListener("DOMContentLoaded", () => {
         const expr = m[2];
         const val = await evalExpr(expr);
         
+        // **** SCOPE FIX ****
+        // Search from current env outwards.
         let targetEnv = env;
         while(targetEnv) {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                break; 
+                break; // Found it in a scope
             }
-            if (targetEnv === ENV) break; 
+            if (targetEnv === ENV) {
+                targetEnv = null; // Reached global, not found
+                break;
+            }
             targetEnv = Object.getPrototypeOf(targetEnv);
         }
-        if (!targetEnv) targetEnv = env; 
+
+        if (targetEnv) {
+            targetEnv[varName] = val; // Found it, update it
+        } else {
+            env[varName] = val; // Not found anywhere, create in *current* env
+        }
+        // ********************
         
-        targetEnv[varName] = val;
         continue;
       }
       
