@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TechBoston CSP Console — FULL APCSP</title>
+  <title>TechBoston CSP Console — Strict AP CSP</title>
   <style>
-    :root { --bg:#000; --panel:#0b0f14; --accent:#60a5fa; --muted:#9aa4b2; --border:#1f2937; }
+    :root { --bg:#000; --panel:#0a0a0a; --accent:#60a5fa; --muted:#93a0ad; --border:#1f2937; }
     *{box-sizing:border-box}
     body{margin:0;background:#000;color:#e5e7eb;font:16px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,sans-serif}
     header{padding:18px 20px;border-bottom:1px solid var(--border);background:#000;position:sticky;top:0;z-index:1}
     h1{margin:0 0 6px;font-size:20px}
     .sub{color:var(--muted);font-size:13px}
     main{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;padding:16px}
-    .card{background:#0a0a0a;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.4)}
     .card h2{font-size:14px;margin:0;padding:10px 12px;color:#cbd5e1;border-bottom:1px solid var(--border);background:#0b0b0b}
     .toolbar{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap}
     button,select{background:#141a26;color:#e5e7eb;border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-    button.primary{background:var(--accent);color:#05122a;border-color:#3b82f6}
+    button.primary{background:var(--accent);color:#061327;border-color:#3b82f6}
     button.danger{background:#1a1620;color:#fecaca;border-color:#7f1d1d}
-    textarea{width:100%;height:480px;resize:vertical;background:#0c1320;color:#e5e7eb;border:0;outline:none;padding:12px 14px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;caret-color:var(--accent)}
-    .console{height:520px;overflow:auto;padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#05080f}
+    textarea{width:100%;height:520px;resize:vertical;background:#0c1320;color:#e5e7eb;border:0;outline:none;padding:12px 14px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;caret-color:var(--accent)}
+    .console{height:560px;overflow:auto;padding:12px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#05080f}
     .line{white-space:pre-wrap}
     .log{color:#d1fae5}.err{color:#fecaca}.sys{color:#93c5fd}
     .status{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:#0e1522}
@@ -32,12 +32,11 @@
 </head>
 <body>
   <header>
-    <h1>TechBoston CSP Console <span style="font-weight:600;opacity:.8">(full APCSP)</span></h1>
+    <h1>TechBoston CSP Console <span style="opacity:.7">(Strict AP CSP)</span></h1>
     <div class="sub">
-      Supports: <b>SET</b>, <b>DISPLAY</b>, <b>INPUT</b>, <b>IF / ELSE / END IF</b>,
-      <b>REPEAT n TIMES / END REPEAT</b>, <b>REPEAT UNTIL cond / END REPEAT</b>,
-      <b>PROCEDURE / RETURN</b>, <b>Lists</b> (1-based: <code>L[1]</code>), <b>APPEND/INSERT/REMOVE</b>,
-      <b>LENGTH OF</b>. Operators: <code>= ≠ &lt; ≤ &gt; ≥</code>, logic <code>AND OR NOT</code>.
+      SET, DISPLAY, INPUT, IF/ELSE/END IF, REPEAT n TIMES/END REPEAT, REPEAT UNTIL/END REPEAT,
+      PROCEDURE/RETURN/END PROCEDURE, Lists (1-based), APPEND/INSERT/REMOVE, LENGTH OF.
+      Operators: = ≠ &lt; ≤ &gt; ≥, AND/OR/NOT. Calls: <b>CALL name(args)</b> as a statement; <b>name(args)</b> in expressions.
     </div>
   </header>
 
@@ -65,14 +64,14 @@
       <div class="status" id="status">Idle</div>
     </section>
   </main>
-  <footer>MIT License · Single-file · BG is BLACK on purpose 🖤</footer>
+  <footer>MIT · Single-file · BG is BLACK 🖤</footer>
 
   <script>
-  // ================== TechBoston APCSP Interpreter (full) ==================
+  // ================== TechBoston APCSP Interpreter (Strict Mode) ==================
   window.addEventListener("DOMContentLoaded", () => {
     const $ = s => document.querySelector(s);
 
-    // UI refs
+    // UI
     const logEl = $("#console"), statusEl = $("#status");
     const runBtn = $("#runBtn"), stopBtn = $("#stopBtn"), editor = $("#editor");
     const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
@@ -81,13 +80,13 @@
 
     let halted = false, inputResolve=null, inputReject=null;
 
-    // ---------- console helpers ----------
+    // Console helpers
     function out(msg, cls="log"){ const d=document.createElement("div"); d.className="line "+cls; d.textContent=String(msg); logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
     const log = m=>out(m,"log"), sys=m=>out(m,"sys"), err=m=>out(m,"err");
     const clearConsole = ()=> logEl.innerHTML = "";
     const setStatus = s => statusEl.textContent = s;
 
-    // ---------- INPUT UI ----------
+    // INPUT UI
     function showPrompt(label){ promptInput.value=""; promptInput.placeholder=label||"Input"; promptWrap.classList.add("show"); promptInput.focus(); return new Promise((res,rej)=>{ inputResolve=res; inputReject=rej; });}
     function hidePrompt(){ promptWrap.classList.remove("show"); }
     promptOk.onclick = ()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); } };
@@ -98,9 +97,9 @@
     function preprocess(src){
       return src.split(/\r?\n/).map((raw, idx)=>{
         const s = raw
-          .replace(/[\u200B-\u200D\uFEFF]/g,"")   // zero-width
-          .replace(/#.*$/,"")                     // # comment
-          .replace(/\/\/.*$/,"")                  // // comment
+          .replace(/[\u200B-\u200D\uFEFF]/g,"")
+          .replace(/#.*$/,"")
+          .replace(/\/\/.*$/,"")
           .trim();
         return { idx, raw, s };
       });
@@ -158,7 +157,7 @@
         return e;
       }
 
-      // expose procedures as async functions in env so they can be used in expressions
+      // expose procedures in expressions as async functions
       const envWithProcs = new Proxy(env, {
         get(target, prop){
           if(prop in target) return target[prop];
@@ -174,10 +173,8 @@
         const def = procs[name];
         if(!def) throw `Unknown procedure ${name}`;
         const local = Object.create(callerEnv);
-        // bind params
         for(let i=0;i<def.params.length;i++) local[def.params[i]] = argVals[i];
-        // allow nested calls inside expressions
-        const result = await execRange(def.start, def.end, lines, blocks, procs, local);
+        const result = await execRange(def.start, def.end, lines, blocks, procs, local, true);
         return result?.__ret ?? null;
       }
 
@@ -196,73 +193,74 @@
     }
 
     // ---------- executor ----------
-    async function execRange(start, end, lines, blocks, procs, env){
+    async function execRange(start, end, lines, blocks, procs, env, insideProc=false){
       const evalExpr = makeEval(env, procs, lines, blocks);
       let i=start; let retVal=undefined; let steps=0;
 
       while(i<end){
         if(halted) return {__halt:true};
-        if(++steps>50000) throw "Program aborted: too many steps (infinite loop?)";
-
+        if(++steps>60000) throw "Program aborted: too many steps (infinite loop?)";
         const {s, idx} = lines[i]; i++;
         if(!s) continue;
 
-        // skip procedure bodies during top-level run
+        // Skip procedure bodies at top level (they're parsed, callable later)
         if(/^PROCEDURE\b/i.test(s)){ const m=s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i); const p=procs[m[1]]; i = (p?.end ?? i-1) + 1; continue; }
-        if(/^END\s+PROCEDURE\b/i.test(s)) return {__ret:retVal};
+        if(/^END\s+PROCEDURE\b/i.test(s)){ if(insideProc) return {__ret:retVal}; else continue; }
 
-        // DISPLAY
-        if(/^DISPLAY\s*\(/i.test(s)){ const m=s.match(/^DISPLAY\s*\((.*)\)\s*$/i); log(await evalExpr(m[1])); continue; }
+        // DISPLAY(expr)
+        if(/^DISPLAY\s*\(/i.test(s)){ const m=s.match(/^DISPLAY\s*\((.*)\)\s*$/i); if(!m) throw `DISPLAY syntax at line ${idx+1}`; log(await evalExpr(m[1])); continue; }
 
-        // assignments (with or without SET)
-        if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)/.test(s)){
-          const m=s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
+        // SET name ← expr
+        if(/^SET\b/i.test(s)){
+          const m=s.match(/^SET\s+([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
+          if(!m) throw `Bad SET syntax at line ${idx+1}`;
           env[m[1]] = await evalExpr(m[2]); continue;
         }
 
         // IF / ELSE / END IF
-        if(/^IF\b/i.test(s)){ const cond=s.replace(/^IF\b/i,"").replace(/\bTHEN\b/i,"").trim(); const ok=await evalExpr(cond); const meta=blocks[idx]; if(!ok){ i = (meta.else!=null? meta.else+1 : meta.end+1); } continue; }
+        if(/^IF\b/i.test(s)){ const cond=s.replace(/^IF\b/i,"").replace(/\bTHEN\b/i,"").trim(); const ok=await evalExpr(cond); const meta=blocks[idx]; if(!meta) throw `IF without END IF at line ${idx+1}`; if(!ok) i = (meta.else!=null? meta.else+1 : meta.end+1); continue; }
         if(/^ELSE\b/i.test(s)){ const startIf=findUp(lines, idx, /^IF\b/i); i = blocks[startIf].end + 1; continue; }
         if(/^END\s*IF\b/i.test(s)){ continue; }
 
-        // REPEAT TIMES
+        // REPEAT n TIMES
         if(/^REPEAT\s+\d+\s+TIMES\b/i.test(s)){
           const m=s.match(/^REPEAT\s+(\d+)\s+TIMES/i); const count=+m[1]; const meta=blocks[idx];
-          env[`_c${idx}`] ??= 0; env[`_c${idx}`]++; if(env[`_c${idx}`] > count){ delete env[`_c${idx}`]; i = meta.end + 1; } continue;
+          if(!meta) throw `REPEAT TIMES without END REPEAT at line ${idx+1}`;
+          env[`_c${idx}`] ??= 0; env[`_c${idx}`]++;
+          if(env[`_c${idx}`] > count){ delete env[`_c${idx}`]; i = meta.end + 1; }
+          continue;
         }
+
         // REPEAT UNTIL
         if(/^REPEAT\s+UNTIL\b/i.test(s)){ env[`_u${idx}`] = s.replace(/^REPEAT\s+UNTIL\b/i,"").trim(); continue; }
         if(/^END\s*REPEAT\b/i.test(s)){ const startR=findUp(lines, idx, /^REPEAT\b/i); if(/^REPEAT\s+UNTIL\b/i.test(lines[startR].s)){ const cond=env[`_u${startR}`]; const ok=await evalExpr(cond); if(!ok){ i = startR + 1; } } continue; }
 
         // List verbs as statements
-        if(/^APPEND\s*\(/i.test(s) || /^INSERT\s*\(/i.test(s) || /^REMOVE\s*\(/i.test(s)){
-          await evalExpr(s); continue;
-        }
-        if(/^LENGTH\s*\(/i.test(s) || /\bLENGTH\s+OF\b/i.test(s)){
-          // evaluated only if assigned or displayed; otherwise no-op
+        if(/^APPEND\s*\(/i.test(s) || /^INSERT\s*\(/i.test(s) || /^REMOVE\s*\(/i.test(s) || /^LENGTH\s*\(/i.test(s) || /\bLENGTH\s+OF\b/i.test(s)){
+          // If not assigned or displayed, still evaluate for side effect
           await evalExpr(s); continue;
         }
 
-        // Procedure CALL or bare call
-        if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s) || /^[A-Za-z_]\w*\s*\(/.test(s)){
+        // CALL name(args) — required as a statement in Strict mode
+        if(/^CALL\s+[A-Za-z_]\w*\s*\(/i.test(s)){
           const call = s.replace(/^CALL\s+/i,"");
-          // allow call result to be discarded
-          await evalExpr(call);
+          await evalExpr(call); // value discarded
           continue;
         }
 
         // RETURN (only valid inside procedures)
-        if(/^RETURN\b/i.test(s)){ const expr=s.replace(/^RETURN\b/i,"").trim(); retVal = expr? await evalExpr(expr):null; return {__ret:retVal}; }
+        if(/^RETURN\b/i.test(s)){ if(!insideProc) throw `RETURN outside of PROCEDURE at line ${idx+1}`; const expr=s.replace(/^RETURN\b/i,"").trim(); retVal = expr? await evalExpr(expr):null; return {__ret:retVal}; }
 
-        // INPUT as stand-alone
+        // Standalone INPUT line allowed (value discarded)
         if(/^INPUT\s*\(/i.test(s)){ await evalExpr(s); continue; }
 
-        throw `Unknown statement at line ${idx+1}: ${s}`;
+        // Strict mode: disallow bare assignment without SET, or bare calls without CALL
+        throw `Unknown or disallowed statement at line ${idx+1}: ${s}`;
       }
       return {__ret:retVal};
     }
 
-    // ---------- runner ----------
+    // ---------- run ----------
     async function run(src){
       halted=false; clearConsole(); setStatus("Parsing…");
       const lines = preprocess(src);
@@ -275,19 +273,19 @@
       const env = Object.create(null);
       setStatus("Running…");
       try{
-        await execRange(0, lines.length, lines, blocks, procs, env);
+        await execRange(0, lines.length, lines, blocks, procs, env, false);
         setStatus("Finished");
       }catch(e){
         err(e); setStatus("Crashed");
       }
     }
 
-    // ---------- UI wiring ----------
+    // UI wire
     runBtn.onclick = ()=> run(editor.value);
     stopBtn.onclick = ()=> { halted=true; setStatus("Stopping…"); };
     document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); runBtn.click(); }});
 
-    // ---------- samples ----------
+    // Samples (Strict mode)
     const samples = {
 "Hello + INPUT":
 `DISPLAY("What is your name?")
@@ -304,6 +302,13 @@ SET r ← 18.5
 SET paycheck ← pay(h, r)
 DISPLAY("Pay = $" + paycheck)`,
 
+"CALL statement":
+`PROCEDURE shout(msg)
+  DISPLAY(">> " + msg)
+END PROCEDURE
+
+CALL shout("TechBoston!")`,
+
 "Lists (1-based)":
 `SET L ← [10, 20, 30]
 DISPLAY(LENGTH OF L)     # 3
@@ -314,7 +319,7 @@ REMOVE(L, 3)             # remove 20
 DISPLAY(LENGTH(L))       # 4
 DISPLAY(L[4])`,
 
-"Loops + IF":
+"IF + Loops":
 `SET i ← 0
 REPEAT UNTIL i ≥ 5
   IF i = 3
@@ -323,15 +328,24 @@ REPEAT UNTIL i ≥ 5
     DISPLAY(i)
   END IF
   SET i ← i + 1
-END REPEAT`
+END REPEAT`,
+
+"Return in expression":
+`PROCEDURE add(a, b)
+  RETURN a + b
+END PROCEDURE
+
+SET z ← add(7, 5) * 2
+DISPLAY(z)`
     };
+
     samplesSel.innerHTML = '<option value="">Load sample…</option>' +
       Object.keys(samples).map(k=>`<option value="${k}">${k}</option>`).join('');
     samplesSel.onchange = ()=>{ const k=samplesSel.value; if(samples[k]) editor.value=samples[k]; samplesSel.value=""; };
 
-    // default
+    // Default
     editor.value = samples["Procedure + RETURN"];
-    setStatus("Ready"); sys("Ready. Black background build.");
+    setStatus("Ready"); sys("Strict AP CSP build. Black background.");
   });
   </script>
 </body>
