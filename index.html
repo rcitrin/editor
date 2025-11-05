@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Citrin's APCSP Console</title>
 <style>
-/* Base colors from your screenshot aesthetic (IntelliJ Dark/Darcula theme) */
 :root {
   --bg: #1e1e1e;
   --panel-bg: #252526;
@@ -23,8 +22,6 @@
   --editor-text: #d4d4d4;
   --editor-caret: #aeafad;
 }
-
-/* General styling */
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -35,8 +32,6 @@ body {
   flex-direction: column;
   height: 100vh;
 }
-
-/* Header styling */
 header {
   padding: 10px 15px;
   border-bottom: 1px solid var(--border);
@@ -50,8 +45,6 @@ header span {
   font-weight: normal;
   color: var(--text-muted);
 }
-
-/* Main layout (Side-by-side Grid) */
 main {
   flex-grow: 1;
   display: grid;
@@ -60,8 +53,6 @@ main {
   padding: 10px;
   min-height: 0;
 }
-
-/* Card/Panel styling */
 .card {
   background: var(--panel-bg);
   border: 1px solid var(--border);
@@ -71,7 +62,6 @@ main {
   flex-direction: column;
   min-height: 0;
 }
-
 .card h2 {
   font-size: 14px;
   margin: 0;
@@ -81,8 +71,6 @@ main {
   background: #333333;
   flex-shrink: 0;
 }
-
-/* Toolbar styling */
 .toolbar {
   display: flex;
   gap: 8px;
@@ -112,8 +100,6 @@ button.danger {
   color: var(--run-btn-text);
   border-color: var(--stop-btn-bg);
 }
-
-/* Textarea / Editor styling */
 textarea {
   flex-grow: 1;
   width: 100%;
@@ -128,8 +114,6 @@ textarea {
   caret-color: var(--editor-caret);
   overflow: auto;
 }
-
-/* Console styling */
 .console {
   flex-grow: 1;
   overflow: auto;
@@ -141,14 +125,10 @@ textarea {
 .log { color: var(--console-log); }
 .err { color: var(--console-err); }
 .sys { color: var(--console-sys); }
-
-/* Prompt and Status bars */
 .prompt-wrap { display: none; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--panel-bg); align-items: center; flex-shrink: 0; }
 .prompt-wrap input { flex: 1; background: #3c3f41; color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
 .prompt-wrap.show { display: flex; }
 .status { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--panel-bg); flex-shrink: 0; }
-
-/* Footer styling */
 footer {
   color: var(--text-muted);
   text-align: center;
@@ -422,12 +402,18 @@ window.addEventListener("DOMContentLoaded", () => {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
                 break; // Found it in an outer scope
             }
-            if (targetEnv === ENV) break; // Reached global scope
+            if (targetEnv === ENV) { // Reached global
+                targetEnv = null; // Not found in chain
+                break;
+            }
             targetEnv = Object.getPrototypeOf(targetEnv);
         }
-        if (!targetEnv) targetEnv = env; // Not found, set in local
-        
-        targetEnv[varName] = val;
+
+        if (targetEnv) {
+             targetEnv[varName] = val; // Found it, update it
+        } else {
+             env[varName] = val; // Not found anywhere, create in *current* env
+        }
         continue;
       }
       
@@ -517,18 +503,13 @@ window.addEventListener("DOMContentLoaded", () => {
       if(s === "}") {
         // This } could be for an IF, ELSE, REPEAT, FOR EACH, or PROCEDURE
         
-        // First, check if it's the end of the procedure we're in
-        if (insideProc && i === end) {
-            return {__ret: null}; // Implicit return at end of procedure
-        }
-
-        // If not, check if it's a loop's }
+        // First, check if it's a loop's }
         const openBraceLine = Object.keys(BLOCKS.braceMatch).find(k => BLOCKS.braceMatch[k] === idx);
         
         if (openBraceLine) {
             const startLineIdx = BLOCKS.loopStart[openBraceLine];
             if (startLineIdx != null) {
-              // This is a loop's }
+              // This IS a loop's }
               const startLine = LINES[startLineIdx].s;
               
               if (/^REPEAT\s+UNTIL/i.test(startLine)) {
@@ -537,17 +518,23 @@ window.addEventListener("DOMContentLoaded", () => {
                 if (!ok) {
                   i = openBraceLine; // Jump back to {
                 }
+                continue; // Continue the while loop
               } else if (/^REPEAT\s+.*TIMES/i.test(startLine)) {
                 i = startLineIdx; // Jump back to REPEAT line
+                continue;
               } else if (/^FOR EACH/i.test(startLine)) {
                 i = startLineIdx; // Jump back to FOR EACH line
+                continue;
               }
-              continue; // We've handled the loop logic
             }
         }
         
-        // If it wasn't a loop's } or the end of a proc, it must be an IF/ELSE's }.
-        // In that case, just continue.
+        // If it wasn't a loop brace, check if it's the end of the procedure
+        if (insideProc && i === end) {
+            return {__ret: null}; // Implicit return at end of procedure
+        }
+        
+        // If not a loop or end of proc, it's an IF/ELSE brace, so just continue.
         continue;
       }
 
@@ -564,6 +551,11 @@ window.addEventListener("DOMContentLoaded", () => {
           await evalExpr(s);
           continue;
         }
+      }
+      
+      // Opening brace { (if not after a command)
+      if(s === "{") {
+          continue; // Skip standalone brace
       }
 
       throw `Unknown statement at line ${idx+1}: ${s}`;
