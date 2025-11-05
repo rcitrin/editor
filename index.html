@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Citrin's APCSP Simulator</title>
+<title>Citrin's APCSP Console</title>
 <style>
 :root {
   --bg: #1e1e1e;
@@ -160,7 +160,7 @@ footer {
 
 <body>
 <header>
-  Citrin's APCSP Simulator <span>(Beta 7)</span>
+  Citrin's APCSP Console <span>(Version 2.0 - With Line Numbers)</span>
 </header>
 
 <main>
@@ -831,6 +831,33 @@ DISPLAY("Double: " + (num * 2))`,
 `DISPLAY("Rolling dice...")
 roll ← RANDOM(1, 6)
 DISPLAY("You rolled: " + roll)`,
+
+"MOD Operator":
+`remainder ← 10 MOD 3
+DISPLAY("10 MOD 3 = " + remainder)
+
+num ← 7
+IF (num MOD 2 = 0)
+{
+  DISPLAY(num + " is even")
+}
+ELSE
+{
+  DISPLAY(num + " is odd")
+}`,
+
+"RANDOM + MOD (Even/Odd Game)":
+`randomNum ← RANDOM(1, 100)
+DISPLAY("Random number: " + randomNum)
+
+IF (randomNum MOD 2 = 0)
+{
+  DISPLAY("It's EVEN!")
+}
+ELSE
+{
+  DISPLAY("It's ODD!")
+}`,
 
 "Complex Example":
 `scores ← [85, 92, 78, 95, 88]
