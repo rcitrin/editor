@@ -143,7 +143,7 @@ footer {
 
 <body>
 <header>
-  Citrin's APCSP Console <span>(Version 1.0)</span>
+  Citrin's APCSP Console <span>(Version 2.0 - Fixed)</span>
 </header>
 
 <main>
@@ -170,13 +170,12 @@ footer {
   </section>
 </main>
 
-<footer>AP CSP Emulator</footer>
+<footer>AP CSP Emulator - Fully Fixed</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   const $ = s => document.querySelector(s);
 
-  // UI Elements
   const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
   const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
   const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
@@ -186,13 +185,18 @@ window.addEventListener("DOMContentLoaded", () => {
   const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
   const setStatus = s => statusEl.textContent = s;
 
-  function showPrompt(label){ promptInput.value=""; promptInput.placeholder=label||"Input"; promptWrap.classList.add("show"); promptInput.focus(); return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;}); }
+  function showPrompt(label){ 
+    promptInput.value=""; 
+    promptInput.placeholder=label||"Input"; 
+    promptWrap.classList.add("show"); 
+    promptInput.focus(); 
+    return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;}); 
+  }
   function hidePrompt(){ promptWrap.classList.remove("show"); }
-  promptOk.onclick=()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); } };
-  promptCancel.onclick=()=>{ if(inputReject){ inputReject("cancel"); hidePrompt(); } };
+  promptOk.onclick=()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); inputResolve=null; inputReject=null; } };
+  promptCancel.onclick=()=>{ if(inputReject){ inputReject(new Error("Input cancelled")); hidePrompt(); inputResolve=null; inputReject=null; } };
   promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
 
-  // ---------- Preprocess ----------
   function preprocess(src){
     return src.split(/\r?\n/).map((raw,idx)=>{
       const s = raw
@@ -202,88 +206,53 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- Block map (Brace-based) ----------
-  function buildBlocks(lines){
-    const blocks = {
-      braceMatch: {}, // maps { line -> } line
-      ifElse: {},     // maps IF line -> ELSE line
-      elseEnd: {},    // maps ELSE line -> } line (relative to ELSE line)
-      loopStart: {},  // maps { line -> REPEAT/FOR EACH line
-    };
-    const stack = []; // To track open {
-    const ifStack = []; // To track open IFs
-
-    for (let i = 0; i < lines.length; i++) {
-      const s = lines[i].s;
-      if (!s) continue;
-
-      if (/^IF\s*\((.*)\)/i.test(s)) {
-        ifStack.push(i);
-      } else if (s === "ELSE") {
-        const ifLine = ifStack.pop();
-        if (ifLine == null) throw `ELSE without IF at line ${i + 1}`;
-        blocks.ifElse[ifLine] = i;
-      } else if (s === "{") {
-        stack.push(i);
-      } else if (s === "}") {
-        const openBraceLine = stack.pop();
-        if (openBraceLine == null) throw `} without { at line ${i + 1}`;
-        blocks.braceMatch[openBraceLine] = i;
-        
-        let tempStartLine = openBraceLine - 1;
-        while(tempStartLine > 0 && lines[tempStartLine].s === "") {
-          tempStartLine--;
-        }
-        const blockStartLineText = lines[tempStartLine].s;
-
-        if (/^ELSE/i.test(blockStartLineText)) {
-          blocks.elseEnd[tempStartLine] = i;
-        } else if (/^REPEAT/i.test(blockStartLineText) || /^FOR EACH/i.test(blockStartLineText)) {
-          blocks.loopStart[openBraceLine] = tempStartLine;
-        }
-      }
-    }
-    if (stack.length) throw `Unclosed block at line ${stack[0] + 1}`;
-    return blocks;
-  }
-
-  // ---------- Procedures table (FIXED) ----------
   function parseProcedures(lines){
     const procs = {};
-    let open = null;
-    for (let i = 0; i < lines.length; i++){
+    let i = 0;
+    while (i < lines.length) {
       const t = lines[i].s;
-      if(!t) continue;
       if(/^PROCEDURE\b/i.test(t)){
         const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
-        if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
-        if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`; 
-        open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i + 1, end: null };
-      } else if(t === "{") {
-          if (open && open.start === i) {
-            open.start = i + 1; // Body starts *after* the brace
-          }
-      } else if(t === "}") {
-        if(open && open.end === null) {
-          open.end = i; // The line index of }
-          procs[open.name] = open;
-          open = null;
+        if(!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx+1}`;
+        const name = m[1];
+        const params = m[2].trim() ? m[2].split(",").map(s=>s.trim()) : [];
+        
+        i++;
+        if (i >= lines.length || lines[i].s !== "{") {
+          throw `PROCEDURE ${name} at line ${lines[i-1].idx+1} must be followed by {`;
         }
+        
+        const bodyStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < lines.length && depth > 0) {
+          if (lines[i].s === "{") depth++;
+          else if (lines[i].s === "}") depth--;
+          i++;
+        }
+        
+        if (depth !== 0) throw `Unclosed PROCEDURE ${name}`;
+        
+        const bodyEnd = i - 1;
+        procs[name] = { name, params, start: bodyStart, end: bodyEnd };
+      } else {
+        i++;
       }
     }
     return procs;
   }
 
-  // ---------- Expression evaluator (All fixes applied) ----------
+  let LINES=[], PROCS=null, ENV=null;
+
   function makeEval(env, procs){
-    const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:&|]+$/u;
+    const safe=/^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
     
     function rewrite(expr){
       return expr
-        .replace(/[“”]/g,'"')
+        .replace(/[""]/g,'"')
         .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        .replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/\bNOT\b/g,"!")
-        .replace(/\bLENGTH\s*\(([^)]+)\)/gi, "LENGTH($1)")
+        .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
+        .replace(/\bMOD\b/gi,"%")
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
     }
 
@@ -291,42 +260,61 @@ window.addEventListener("DOMContentLoaded", () => {
       const def = procs[name];
       if(!def) throw `Unknown procedure '${name}'`;
       const local = Object.create(callerEnv);
-      for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
+      for(let i=0; i<def.params.length; i++) {
+        local[def.params[i]] = i < args.length ? args[i] : undefined;
+      }
       const result = await execRange(def.start, def.end, local, true); 
-      return result.__ret ?? null;
+      return result;
     }
 
     return async function evalExpr(expr){
       const e = rewrite(expr);
       if(!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
 
-      // --- Build explicit scope ---
       const scope = {
-          ...env, 
           Math,
           RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-          INPUT: async () => showPrompt("Input"), 
-          APPEND: (L,v)=>{ if(!Array.isArray(L)) throw "APPEND target is not a list"; L.push(v); },
-          INSERT: (L,i,v)=>{ if(!Array.isArray(L)) throw "INSERT target is not a list"; L.splice(i-1,0,v); },
-          REMOVE: (L,i)=>{ if(!Array.isArray(L)) throw "REMOVE target is not a list"; L.splice(i-1,1); },
-          LENGTH: L=>{ if(L == null) throw "LENGTH target is null"; if(!Array.isArray(L)) throw "LENGTH target is not a list"; return L.length; },
+          INPUT: async () => {
+            const val = await showPrompt("Input");
+            return isNaN(val) ? val : Number(val);
+          },
+          APPEND: (L,v)=>{ 
+            if(!Array.isArray(L)) throw "APPEND: first argument must be a list"; 
+            L.push(v); 
+          },
+          INSERT: (L,i,v)=>{ 
+            if(!Array.isArray(L)) throw "INSERT: first argument must be a list";
+            if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}`;
+            L.splice(i-1,0,v); 
+          },
+          REMOVE: (L,i)=>{ 
+            if(!Array.isArray(L)) throw "REMOVE: first argument must be a list";
+            if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}`;
+            L.splice(i-1,1); 
+          },
+          LENGTH: L=>{ 
+            if(L == null) throw "LENGTH: argument is null"; 
+            if(!Array.isArray(L)) throw "LENGTH: argument must be a list"; 
+            return L.length; 
+          },
           IDX: (L,i)=>{
-            if(L == null) throw "List index target is null";
-            if(!Array.isArray(L)) throw "List index target is not a list";
-            if (i < 1 || i > L.length) throw `Invalid index: ${i} for list of length ${L.length}`;
+            if(L == null) throw "List index: list is null";
+            if(!Array.isArray(L)) throw "List index: not a list";
+            if (i < 1 || i > L.length) throw `List index out of bounds: ${i} (length is ${L.length})`;
             return L[i-1];
           }
       };
       
-      // **** SCOPE FIX ****
       let currentEnv = env;
-      while (currentEnv && currentEnv !== Object.prototype) {
+      while (currentEnv) {
         for (const key of Object.getOwnPropertyNames(currentEnv)) {
             if (!scope.hasOwnProperty(key)) {
                 scope[key] = currentEnv[key];
             }
         }
-        currentEnv = Object.getPrototypeOf(currentEnv);
+        const proto = Object.getPrototypeOf(currentEnv);
+        if (!proto || proto === Object.prototype) break;
+        currentEnv = proto;
       }
       
       for (const name in procs) {
@@ -338,345 +326,477 @@ window.addEventListener("DOMContentLoaded", () => {
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      const body = `
-        const MOD = (a, b) => a % b;
-        return ( ${e} );
-      `;
+      const body = `return ( ${e} );`;
       const fn = new Function(...scopeKeys, body);
       return await fn(...scopeValues);
     };
   }
 
-  // ---------- Globals for current program ----------
-  let LINES=[], BLOCKS=null, PROCS=null, ENV=null, EVAL=null;
-
-  // ---------- Executor (Rewritten for Braces) ----------
   async function execRange(start, end, env, insideProc=false){
-    const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
+    const evalExpr = makeEval(env, PROCS);
     let i = start;
     
-    env.__times = env.__times || {};
-    env.__forEach = env.__forEach || {};
+    const loopState = new Map();
 
     while(i < end){ 
-      if(halted) return {__halt:true};
+      if(halted) return null;
       const {s, idx} = LINES[i];
-      i++;
-      if(!s) continue;
       
-      if(s === "{") { continue; } // Skip opening braces
+      if(!s || s === "{" || s === "}") {
+        i++;
+        continue;
+      }
 
-      // Skip procedure bodies (top level)
       if(!insideProc && /^PROCEDURE\b/i.test(s)){
         const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
         const name = m[1];
         const def = PROCS[name];
-        i = (def.end + 1); // Jump *past* the } line
+        i = def.end + 1;
         continue;
       }
 
-      // Handle RETURN statement
-      if(/^RETURN\s*\((.*)\)/i.test(s)){
-        if(!insideProc) throw `RETURN statement outside of a PROCEDURE at line ${idx+1}`;
-        const expr = s.match(/^RETURN\s*\((.*)\)/i)[1];
-        if (!expr) return {__ret: null};
-        const returnValue = await evalExpr(expr);
-        return {__ret: returnValue};
+      if(/^RETURN\b/i.test(s)){
+        if(!insideProc) throw `RETURN outside procedure at line ${idx+1}`;
+        const m = s.match(/^RETURN\s*\((.*)\)/i);
+        if (!m || !m[1].trim()) return null;
+        return await evalExpr(m[1]);
       }
       
-      // DISPLAY(expression)
-      if(/^DISPLAY\s*\((.*)\)/i.test(s)){
-        const expr = s.match(/^DISPLAY\s*\((.*)\)/i)[1];
-        log(await evalExpr(expr));
+      if(/^DISPLAY\s*\(/i.test(s)){
+        const m = s.match(/^DISPLAY\s*\((.*)\)/i);
+        const val = await evalExpr(m[1]);
+        log(val);
+        i++;
         continue;
       }
       
-      // a <- expression
-      if(/^(SET\s+)?[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)){
-        const m = s.match(/^(?:SET\s+)?([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/i);
+      if(/^[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)){
+        const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
         const varName = m[1];
         const expr = m[2];
         const val = await evalExpr(expr);
         
-        // **** SCOPE FIX ****
         let targetEnv = env;
+        let found = false;
         while(targetEnv) {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                break; 
-            }
-            if (targetEnv === ENV || !Object.getPrototypeOf(targetEnv)) {
-                targetEnv = null; 
+                targetEnv[varName] = val;
+                found = true;
                 break;
             }
-            targetEnv = Object.getPrototypeOf(targetEnv);
-        }
-
-        if (targetEnv) {
-            targetEnv[varName] = val; // Found it, update it
-        } else {
-            env[varName] = val; // Not found anywhere, create in *current* env
+            const proto = Object.getPrototypeOf(targetEnv);
+            if (!proto || proto === Object.prototype) break;
+            targetEnv = proto;
         }
         
+        if (!found) {
+            env[varName] = val;
+        }
+        
+        i++;
+        continue;
+      }
+
+      if(/^[A-Za-z_]\w*\s*\[\s*.*\s*\]\s*(←|<-)\s*(.*)$/.test(s)){
+        const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
+        const listName = m[1];
+        const indexExpr = m[2];
+        const valueExpr = m[3];
+        
+        const list = await evalExpr(listName);
+        const index = await evalExpr(indexExpr);
+        const value = await evalExpr(valueExpr);
+        
+        if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx+1}`;
+        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx+1}`;
+        
+        list[index - 1] = value;
+        i++;
         continue;
       }
       
-      // IF (condition)
-      if(/^IF\s*\((.*)\)/i.test(s)){
-        const cond = s.match(/^IF\s*\((.*)\)/i)[1];
-        const ok = await evalExpr(cond);
-        const nextLine = LINES[i].s; 
-        if (nextLine !== "{") throw `IF at line ${idx+1} must be followed by {`;
+      if(/^IF\s*\(/i.test(s)){
+        const m = s.match(/^IF\s*\((.*)\)/i);
+        const cond = await evalExpr(m[1]);
         
-        const endBrace = BLOCKS.braceMatch[i];
-        if(!ok){
-          const elseLine = BLOCKS.ifElse[idx];
-          if (elseLine != null) {
-            i = elseLine; // Jump to ELSE
-          } else {
-            i = endBrace + 1; // Jump past }
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `IF at line ${idx+1} must be followed by {`;
+        }
+        
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+        
+        if (cond) {
+          await execRange(blockStart, blockEnd, env, insideProc);
+          
+          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+            i++;
+            if (i < end && LINES[i].s === "{") {
+              depth = 1;
+              i++;
+              while (i < end && depth > 0) {
+                if (LINES[i].s === "{") depth++;
+                else if (LINES[i].s === "}") depth--;
+                i++;
+              }
+            }
+          }
+        } else {
+          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+            i++;
+            if (i >= end || LINES[i].s !== "{") {
+              throw `ELSE at line ${LINES[i-1].idx+1} must be followed by {`;
+            }
+            
+            const elseStart = i + 1;
+            depth = 1;
+            i++;
+            while (i < end && depth > 0) {
+              if (LINES[i].s === "{") depth++;
+              else if (LINES[i].s === "}") depth--;
+              i++;
+            }
+            const elseEnd = i - 1;
+            
+            await execRange(elseStart, elseEnd, env, insideProc);
           }
         }
         continue;
       }
       
-      // ELSE
-      if(s === "ELSE") {
-        const nextLine = LINES[i].s;
-        if (nextLine !== "{") throw `ELSE at line ${idx+1} must be followed by {`;
-        const endBrace = BLOCKS.elseEnd[idx];
-        i = endBrace + 1; // Jump past ELSE's }
-        continue;
-      }
-      
-      // REPEAT n TIMES
-      if(/^REPEAT\s+(.*)\s+TIMES/i.test(s)){
-        const expr = s.match(/^REPEAT\s+(.*)\s+TIMES/i)[1];
-        const n = await evalExpr(expr);
-        const nextLine = LINES[i].s;
-        if (nextLine !== "{") throw `REPEAT at line ${idx+1} must be followed by {`;
+      if(/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)){
+        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
+        const countExpr = m[1];
+        const n = await evalExpr(countExpr);
         
-        const count = (env.__times[i] || 0) + 1;
-        env.__times[i] = count;
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `REPEAT TIMES at line ${idx+1} must be followed by {`;
+        }
         
-        if (count > n) {
-          delete env.__times[i];
-          i = BLOCKS.braceMatch[i] + 1; // Jump past }
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+        
+        for (let rep = 0; rep < n; rep++) {
+          if (halted) return null;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
         }
         continue;
       }
       
-      // REPEAT UNTIL (condition)
-      if(/^REPEAT\s+UNTIL\s*\((.*)\)/i.test(s)) {
-        const nextLine = LINES[i].s;
-        if (nextLine !== "{") throw `REPEAT UNTIL at line ${idx+1} must be followed by {`;
+      if(/^REPEAT\s+UNTIL\s*\(/i.test(s)){
+        const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
+        const condExpr = m[1];
+        
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `REPEAT UNTIL at line ${idx+1} must be followed by {`;
+        }
+        
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+        
+        while (true) {
+          if (halted) return null;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+          
+          const cond = await evalExpr(condExpr);
+          if (cond) break;
+        }
         continue;
       }
       
-      // FOR EACH item IN aList (FIXED Regex)
-      if(/^FOR EACH\s+(\w+)\s+IN\s+(.*)/i.test(s)) {
-        const m = s.match(/^FOR EACH\s+(\w+)\s+IN\s+(.*)/i);
+      if(/^FOR\s+EACH\s+/i.test(s)){
+        const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
+        if (!m) throw `Invalid FOR EACH syntax at line ${idx+1}`;
         const itemVar = m[1];
-        const listExpr = m[2]; // Was listVar
+        const listExpr = m[2];
         
-        const nextLine = LINES[i].s;
-        if (nextLine !== "{") throw `FOR EACH at line ${idx+1} must be followed by {`;
-
-        const state = env.__forEach[i] || { index: 0, list: null };
-        if (state.list === null) {
-          state.list = await evalExpr(listExpr); // Was listVar
+        const list = await evalExpr(listExpr);
+        if (!Array.isArray(list)) throw `FOR EACH at line ${idx+1}: ${listExpr} is not a list`;
+        
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `FOR EACH at line ${idx+1} must be followed by {`;
         }
         
-        if (state.index < state.list.length) {
-          env[itemVar] = state.list[state.index]; 
-          state.index++;
-          env.__forEach[i] = state; 
-        } else {
-          delete env.__forEach[i];
-          delete env[itemVar]; 
-          i = BLOCKS.braceMatch[i] + 1; // Jump past }
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
         }
+        const blockEnd = i - 1;
+        
+        for (const item of list) {
+          if (halted) return null;
+          env[itemVar] = item;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+        }
+        
+        delete env[itemVar];
         continue;
       }
 
-      // } (Closing brace) - **** LOGIC FIXED ****
-      if(s === "}") {
-        // This } could be for an IF, ELSE, REPEAT, FOR EACH, or PROCEDURE
-        
-        // First, check if it's a loop's }
-        const openBraceLine = Object.keys(BLOCKS.braceMatch).find(k => BLOCKS.braceMatch[k] === idx);
-        
-        if (openBraceLine) {
-            const startLineIdx = BLOCKS.loopStart[openBraceLine];
-            if (startLineIdx != null) {
-              // This IS a loop's }
-              const startLine = LINES[startLineIdx].s;
-              
-              if (/^REPEAT\s+UNTIL/i.test(startLine)) {
-                const cond = startLine.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i)[1];
-                const ok = await evalExpr(cond);
-                if (!ok) {
-                  i = openBraceLine; // Jump back to {
-                }
-                continue; // Continue the while loop
-              } else if (/^REPEAT\s+.*TIMES/i.test(startLine)) {
-                i = startLineIdx; // Jump back to REPEAT line
-                continue;
-              } else if (/^FOR EACH/i.test(startLine)) {
-                i = startLineIdx; // Jump back to FOR EACH line
-                continue;
-              }
-            }
-        }
-        
-        // If it wasn't a loop brace, it's an IF/ELSE/PROC brace.
-        // The procedure end is handled by the `while(i < end)` condition.
-        // IF/ELSE braces should just continue.
-        continue;
-      }
-
-      // List operations
-      if(/^(APPEND|INSERT|REMOVE)\s*\(/.test(s)) {
+      if(/^(APPEND|INSERT|REMOVE)\s*\(/i.test(s)) {
         await evalExpr(s); 
+        i++;
         continue;
       }
       
-      // Procedure call (bare)
-      if(/^[A-Za-z_]\w*\s*\((.*)\)/.test(s)){
-        const match = s.match(/^([A-Za-z_]\w*)/);
-        if(match && PROCS[match[1]]){
+      if(/^[A-Za-z_]\w*\s*\(/i.test(s)){
+        const m = s.match(/^([A-Za-z_]\w*)/);
+        if(m && PROCS[m[1]]){
           await evalExpr(s);
+          i++;
           continue;
         }
       }
 
-      throw `Unknown statement at line ${idx+1}: ${s}`;
+      throw `Unknown statement at line ${idx+1}: "${s}"`;
     }
-    return {__ret:null};
+    return null;
   }
 
-  // ---------- Run ----------
   async function run(src){
     halted=false; logEl.innerHTML=""; setStatus("Parsing…");
     try{
       LINES = preprocess(src);
-      BLOCKS = buildBlocks(LINES);
-      PROCS  = parseProcedures(LINES);
-      ENV = Object.create(null); // Global env is clean
-      EVAL = makeEval(ENV, PROCS);
-    }catch(e){ err(e); setStatus("Crashed"); return; }
+      PROCS = parseProcedures(LINES);
+      ENV = Object.create(null);
+    }catch(e){ err("Parse Error: " + e); setStatus("Parse Error"); return; }
 
     setStatus("Running…");
     try{
       await execRange(0, LINES.length, ENV, false);
       setStatus("Finished");
-    }catch(e){ err(e); setStatus("Crashed"); }
+    }catch(e){ 
+      err("Runtime Error: " + e); 
+      setStatus("Error"); 
+    }
   }
 
-  // ---------- UI ----------
   $("#runBtn").onclick = ()=> run(editor.value);
-  $("#stopBtn").onclick = ()=> { halted=true; setStatus("Stopping…"); };
+  $("#stopBtn").onclick = ()=> { halted=true; if(inputReject){inputReject(new Error("Stopped"));hidePrompt();} setStatus("Stopped"); };
   document.addEventListener("keydown", e=>{
     if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
   });
 
-  // Samples (NEW: All in correct AP CSP syntax)
   const samples = {
-"Variables & Set":
-`a <- 10
-b <- "Hello"
-DISPLAY(b + " world")
-a <- a * 2
-DISPLAY("The value of a is " + a)`,
+"Hello World":
+`DISPLAY("Hello, World!")`,
 
-"Selection (IF/ELSE)":
-`age <- 17
+"Variables & Assignment":
+`a ← 10
+b ← "Hello"
+DISPLAY(b)
+a ← a * 2
+DISPLAY(a)`,
+
+"Arithmetic & MOD":
+`x ← 17 / 5
+DISPLAY(x)
+y ← 17 MOD 5
+DISPLAY(y)
+DISPLAY(10 + 3 * 2)`,
+
+"IF Statement":
+`age ← 20
 IF (age >= 18)
 {
-  DISPLAY("You can vote.")
+  DISPLAY("Adult")
+}`,
+
+"IF-ELSE":
+`score ← 85
+IF (score >= 90)
+{
+  DISPLAY("A grade")
 }
 ELSE
 {
-  DISPLAY("You are not old enough to vote.")
-}
-IF (age < 13 AND age > 5)
-{
-  DISPLAY("You are a child.")
+  DISPLAY("Not an A")
 }`,
 
-"Loops (REPEAT)":
-`DISPLAY("--- REPEAT n TIMES ---")
-REPEAT 3 TIMES
+"Relational Operators":
+`a ← 5
+b ← 10
+IF (a < b)
+{
+  DISPLAY("a is less than b")
+}
+IF (a ≥ 5)
+{
+  DISPLAY("a is at least 5")
+}`,
+
+"Boolean AND/OR":
+`x ← 15
+IF (x > 10 AND x < 20)
+{
+  DISPLAY("x is between 10 and 20")
+}
+IF (x < 5 OR x > 10)
+{
+  DISPLAY("x is outside 5-10 range")
+}`,
+
+"NOT Operator":
+`ready ← true
+IF (NOT ready)
+{
+  DISPLAY("Not ready")
+}
+ELSE
+{
+  DISPLAY("Ready to go!")
+}`,
+
+"REPEAT n TIMES":
+`REPEAT 5 TIMES
 {
   DISPLAY("Hello!")
-}
-
-DISPLAY("--- REPEAT UNTIL ---")
-count <- 0
-REPEAT UNTIL (count > 2)
-{
-  DISPLAY("Count is " + count)
-  count <- count + 1
 }`,
 
-"Procedures (Statements)":
+"REPEAT UNTIL":
+`count ← 0
+REPEAT UNTIL (count >= 3)
+{
+  DISPLAY(count)
+  count ← count + 1
+}`,
+
+"Lists - Creation & Access":
+`myList ← [10, 20, 30, 40]
+DISPLAY(myList[1])
+DISPLAY(myList[3])
+DISPLAY(LENGTH(myList))`,
+
+"Lists - Modification":
+`nums ← [5, 10, 15]
+nums[2] ← 99
+DISPLAY(nums[2])
+APPEND(nums, 20)
+DISPLAY(LENGTH(nums))`,
+
+"INSERT & REMOVE":
+`items ← [1, 2, 3]
+INSERT(items, 2, 99)
+DISPLAY(items[2])
+REMOVE(items, 1)
+DISPLAY(items[1])`,
+
+"FOR EACH Loop":
+`numbers ← [10, 20, 30, 40]
+FOR EACH num IN numbers
+{
+  DISPLAY(num)
+}`,
+
+"Procedure - No Return":
 `PROCEDURE greet(name)
 {
-  DISPLAY("Hello, " + name)
+  DISPLAY("Hello, " + name + "!")
 }
 
 greet("Alice")
 greet("Bob")`,
 
-"Return Values":
+"Procedure - With Return":
 `PROCEDURE square(n)
 {
   RETURN (n * n)
 }
 
-num <- 7
-numSquared <- square(num)
-DISPLAY(num + " squared is " + numSquared)
-DISPLAY("10 squared is " + square(10))`,
+result ← square(7)
+DISPLAY(result)
+DISPLAY(square(10))`,
 
-"Local Scope":
-`PROCEDURE makeSquare()
+"Nested Procedures":
+`PROCEDURE double(x)
 {
-  result <- square(10)
-  DISPLAY("answer is " + result)
+  RETURN (x * 2)
 }
 
-PROCEDURE square(n)
+PROCEDURE quadruple(x)
 {
-  RETURN (n * n)
+  RETURN (double(double(x)))
 }
 
-makeSquare()`,
+DISPLAY(quadruple(5))`,
 
-"List Processing & FOR EACH":
-`myList <- [10, 20, 30]
-DISPLAY(myList[1])
-DISPLAY(LENGTH(myList))
-
-FOR EACH item IN myList
-{
-  DISPLAY("Item: " + item)
-}`,
-
-"INPUT()":
+"INPUT Example":
 `DISPLAY("What is your name?")
-name <- INPUT()
-DISPLAY("Hello, " + name)`
+name ← INPUT()
+DISPLAY("Hello, " + name)
+DISPLAY("Enter a number:")
+num ← INPUT()
+DISPLAY("Double: " + (num * 2))`,
+
+"RANDOM Function":
+`DISPLAY("Rolling dice...")
+roll ← RANDOM(1, 6)
+DISPLAY("You rolled: " + roll)`,
+
+"Complex Example":
+`scores ← [85, 92, 78, 95, 88]
+total ← 0
+
+FOR EACH score IN scores
+{
+  total ← total + score
+}
+
+average ← total / LENGTH(scores)
+DISPLAY("Average score: " + average)
+
+IF (average >= 90)
+{
+  DISPLAY("Excellent!")
+}
+ELSE
+{
+  DISPLAY("Good job!")
+}`
   };
 
   const sel = $("#samples");
-  sel.innerHTML = '<option value="">Load sample…</option>' +
+  sel.innerHTML = '<option value="">📋 Load Sample...</option>' +
     Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
   sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
 
-  // Start with a blank editor
-  editor.value = "";
+  editor.value = `DISPLAY("Welcome to AP CSP Console!")
+DISPLAY("Select a sample or write your code.")`;
 
-  setStatus("Ready"); sys("Emulator loaded. Awaiting run.");
+  setStatus("Ready"); 
+  sys("✓ Emulator ready. Press Run to execute.");
 });
 </script>
 </body>
