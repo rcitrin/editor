@@ -198,18 +198,11 @@ window.addEventListener("DOMContentLoaded", () => {
       const s = raw
         .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
         .replace(/\t/g,"    ").trim(); 
-      // Split lines like IF (...) {
-      if (/^(IF|REPEAT|FOR EACH|PROCEDURE)\s*.*\)\s*\{$/.test(s)) {
-        return [
-          { idx, raw, s: s.substring(0, s.length - 1).trim() },
-          { idx, raw, s: "{" }
-        ];
-      }
       return { idx, raw, s };
-    }).flat();
+    });
   }
 
-  // ---------- Block map (NEW: Brace-based) ----------
+  // ---------- Block map (Brace-based) ----------
   function buildBlocks(lines){
     const blocks = {
       braceMatch: {}, // maps { line -> } line
@@ -237,14 +230,16 @@ window.addEventListener("DOMContentLoaded", () => {
         if (openBraceLine == null) throw `} without { at line ${i + 1}`;
         blocks.braceMatch[openBraceLine] = i;
         
-        // Find what block this { belonged to
-        const blockStartLine = openBraceLine - 1;
-        const blockStartLineText = lines[blockStartLine].s;
+        let tempStartLine = openBraceLine - 1;
+        while(tempStartLine > 0 && lines[tempStartLine].s === "") {
+          tempStartLine--;
+        }
+        const blockStartLineText = lines[tempStartLine].s;
 
         if (/^ELSE/i.test(blockStartLineText)) {
-          blocks.elseEnd[blockStartLine] = i;
+          blocks.elseEnd[tempStartLine] = i;
         } else if (/^REPEAT/i.test(blockStartLineText) || /^FOR EACH/i.test(blockStartLineText)) {
-          blocks.loopStart[openBraceLine] = blockStartLine;
+          blocks.loopStart[openBraceLine] = tempStartLine;
         }
       }
     }
@@ -260,16 +255,16 @@ window.addEventListener("DOMContentLoaded", () => {
       const t = lines[i].s;
       if(!t) continue;
       if(/^PROCEDURE\b/i.test(t)){
-        // FIX: Regex now allows for { on same line
-        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*\{?$/i);
+        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
         if(!m) throw `Bad PROCEDURE syntax at line ${i+1}`;
-        // FIX: Typo here. Was: `if(open) throw ... (line ${i+1}\`;`
         if(open) throw `Nested PROCEDURE not allowed (line ${i+1})`; 
         open = { name: m[1], params: m[2].trim()? m[2].split(",").map(s=>s.trim()) : [], start: i + 1, end: null };
       } else if(t === "{") {
-          // This is the start of the proc body
+          if (open && open.start === i) {
+            open.start = i + 1; // Body starts *after* the brace
+          }
       } else if(t === "}") {
-        if(open) {
+        if(open && open.end === null) {
           open.end = i; // The line index of }
           procs[open.name] = open;
           open = null;
@@ -281,16 +276,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Expression evaluator (All fixes applied) ----------
   function makeEval(env, procs){
-    // FIX: Added & and | to the safe regex
     const safe=/^[\w\s+\-*/%().,<>!=“”"'\[\]≤≥≠?:&|]+$/u;
     
     function rewrite(expr){
       return expr
         .replace(/[“”]/g,'"')
         .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        // FIX: Made replacements case-sensitive (removed /gi)
         .replace(/\bAND\b/g,"&&").replace(/\bOR\b/g,"||").replace(/\bNOT\b/g,"!")
-        // Use official LENGTH(aList) syntax
         .replace(/\bLENGTH\s*\(([^)]+)\)/gi, "LENGTH($1)")
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
     }
@@ -300,8 +292,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if(!def) throw `Unknown procedure '${name}'`;
       const local = Object.create(callerEnv);
       for(let i=0;i<def.params.length;i++) local[def.params[i]] = args[i];
-      // Run from start line (after {) to *before* end line (})
-      const result = await execRange(def.start + 1, def.end, local, true); 
+      const result = await execRange(def.start, def.end, local, true); 
       return result.__ret ?? null;
     }
 
@@ -311,10 +302,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // --- Build explicit scope ---
       const scope = {
-          ...env, // All user-defined variables (e.g., x, i)
+          ...env, 
           Math,
           RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-          INPUT: async () => showPrompt("Input"), // Added ()
+          INPUT: async () => showPrompt("Input"), 
           APPEND: (L,v)=>{ if(!Array.isArray(L)) throw "APPEND target is not a list"; L.push(v); },
           INSERT: (L,i,v)=>{ if(!Array.isArray(L)) throw "INSERT target is not a list"; L.splice(i-1,0,v); },
           REMOVE: (L,i)=>{ if(!Array.isArray(L)) throw "REMOVE target is not a list"; L.splice(i-1,1); },
@@ -327,7 +318,6 @@ window.addEventListener("DOMContentLoaded", () => {
           }
       };
       
-      // Add procedures to the scope
       for (const name in procs) {
           scope[name] = async (...args) => await callProc(name, args, env);
       }
@@ -335,8 +325,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      // Create function with explicit scope and no 'with'
-      // Need to handle MOD separately as % is different
       const body = `
         const MOD = (a, b) => a % b;
         return ( ${e} );
@@ -354,7 +342,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const evalExpr = (env===ENV ? EVAL : makeEval(env, PROCS));
     let i = start;
     
-    // For loop counters
     env.__times = env.__times || {};
     env.__forEach = env.__forEach || {};
 
@@ -363,6 +350,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const {s, idx} = LINES[i];
       i++;
       if(!s) continue;
+      
+      if(s === "{") { continue; } // Skip opening braces
 
       // Skip procedure bodies (top level)
       if(!insideProc && /^PROCEDURE\b/i.test(s)){
@@ -396,24 +385,26 @@ window.addEventListener("DOMContentLoaded", () => {
         const expr = m[2];
         const val = await evalExpr(expr);
         
-        // Find which env this var lives in
+        // **** SCOPE FIX ****
         let targetEnv = env;
         while(targetEnv) {
             if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                break; // Found it in an outer scope
+                break; 
             }
-            if (targetEnv === ENV) { // Reached global
-                targetEnv = null; // Not found in chain
+            if (targetEnv === ENV) {
+                targetEnv = null; 
                 break;
             }
             targetEnv = Object.getPrototypeOf(targetEnv);
         }
 
         if (targetEnv) {
-             targetEnv[varName] = val; // Found it, update it
+            targetEnv[varName] = val; // Found it, update it
         } else {
-             env[varName] = val; // Not found anywhere, create in *current* env
+            env[varName] = val; // Not found anywhere, create in *current* env
         }
+        // ********************
+        
         continue;
       }
       
@@ -421,7 +412,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if(/^IF\s*\((.*)\)/i.test(s)){
         const cond = s.match(/^IF\s*\((.*)\)/i)[1];
         const ok = await evalExpr(cond);
-        const nextLine = LINES[i].s; // Check for {
+        const nextLine = LINES[i].s; 
         if (nextLine !== "{") throw `IF at line ${idx+1} must be followed by {`;
         
         const endBrace = BLOCKS.braceMatch[i];
@@ -456,7 +447,6 @@ window.addEventListener("DOMContentLoaded", () => {
         env.__times[i] = count;
         
         if (count > n) {
-          // Loop finished
           delete env.__times[i];
           i = BLOCKS.braceMatch[i] + 1; // Jump past }
         }
@@ -467,7 +457,6 @@ window.addEventListener("DOMContentLoaded", () => {
       if(/^REPEAT\s+UNTIL\s*\((.*)\)/i.test(s)) {
         const nextLine = LINES[i].s;
         if (nextLine !== "{") throw `REPEAT UNTIL at line ${idx+1} must be followed by {`;
-        // This is the start line, just continue. Logic is at }
         continue;
       }
       
@@ -480,26 +469,24 @@ window.addEventListener("DOMContentLoaded", () => {
         const nextLine = LINES[i].s;
         if (nextLine !== "{") throw `FOR EACH at line ${idx+1} must be followed by {`;
 
-        // Get loop state
         const state = env.__forEach[i] || { index: 0, list: null };
         if (state.list === null) {
-          state.list = await evalExpr(listVar); // Evaluate list only once
+          state.list = await evalExpr(listVar); 
         }
         
         if (state.index < state.list.length) {
-          env[itemVar] = state.list[state.index]; // Set itemVar
+          env[itemVar] = state.list[state.index]; 
           state.index++;
-          env.__forEach[i] = state; // Save state
+          env.__forEach[i] = state; 
         } else {
-          // Loop finished
           delete env.__forEach[i];
-          delete env[itemVar]; // Clean up
+          delete env[itemVar]; 
           i = BLOCKS.braceMatch[i] + 1; // Jump past }
         }
         continue;
       }
 
-      // } (Closing brace)
+      // } (Closing brace) - **** LOGIC FIXED ****
       if(s === "}") {
         // This } could be for an IF, ELSE, REPEAT, FOR EACH, or PROCEDURE
         
@@ -529,18 +516,15 @@ window.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        // If it wasn't a loop brace, check if it's the end of the procedure
-        if (insideProc && i === end) {
-            return {__ret: null}; // Implicit return at end of procedure
-        }
-        
-        // If not a loop or end of proc, it's an IF/ELSE brace, so just continue.
+        // If it wasn't a loop brace, it's an IF/ELSE/PROC brace.
+        // If it's the end of the procedure, the `while` loop will catch it.
+        // If it's IF/ELSE, we just continue.
         continue;
       }
 
       // List operations
       if(/^(APPEND|INSERT|REMOVE)\s*\(/.test(s)) {
-        await evalExpr(s); // Run as a statement
+        await evalExpr(s); 
         continue;
       }
       
@@ -551,11 +535,6 @@ window.addEventListener("DOMContentLoaded", () => {
           await evalExpr(s);
           continue;
         }
-      }
-      
-      // Opening brace { (if not after a command)
-      if(s === "{") {
-          continue; // Skip standalone brace
       }
 
       throw `Unknown statement at line ${idx+1}: ${s}`;
