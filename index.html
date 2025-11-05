@@ -100,6 +100,23 @@ button.danger {
   color: var(--run-btn-text);
   border-color: var(--stop-btn-bg);
 }
+.editor-wrapper {
+  flex-grow: 1;
+  display: flex;
+  overflow: hidden;
+}
+.line-numbers {
+  background: #1a1a1a;
+  color: #858585;
+  padding: 12px 8px;
+  text-align: right;
+  user-select: none;
+  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  min-width: 40px;
+  white-space: pre;
+}
 textarea {
   flex-grow: 1;
   width: 100%;
@@ -143,7 +160,7 @@ footer {
 
 <body>
 <header>
-  Citrin's APCSP Console <span>(Version 2.0)</span>
+  Citrin's APCSP Console <span>(Version 2.0 - With Line Numbers)</span>
 </header>
 
 <main>
@@ -155,7 +172,10 @@ footer {
       <select id="samples"></select>
       <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
     </div>
-    <textarea id="editor"></textarea>
+    <div class="editor-wrapper">
+      <div class="line-numbers" id="lineNumbers"></div>
+      <textarea id="editor"></textarea>
+    </div>
   </section>
 
   <section class="card">
@@ -170,16 +190,27 @@ footer {
   </section>
 </main>
 
-<footer>AP CSP Emulator - Fully Fixed</footer>
+<footer>AP CSP Emulator</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   const $ = s => document.querySelector(s);
 
   const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
+  const lineNumbers = $("#lineNumbers");
   const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
   const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
   let halted = false, inputResolve=null, inputReject=null;
+
+  function updateLineNumbers() {
+    const lines = editor.value.split('\n').length;
+    lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+  }
+
+  editor.addEventListener('input', updateLineNumbers);
+  editor.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editor.scrollTop;
+  });
 
   const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=String(m);logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
   const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
@@ -255,8 +286,13 @@ window.addEventListener("DOMContentLoaded", () => {
         .replace(/\bMOD\b/gi,"%")
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
       
-      // Convert = to == for comparisons (but not in string literals)
       result = result.replace(/([^<>!=])=([^=])/g, '$1==$2');
+      
+      // Add await before procedure calls
+      for (const procName in procs) {
+        const regex = new RegExp(`\\b${procName}\\s*\\(`, 'g');
+        result = result.replace(regex, `await ${procName}(`);
+      }
       
       return result;
     }
@@ -324,24 +360,29 @@ window.addEventListener("DOMContentLoaded", () => {
       
       for (const name in procs) {
           if (!scope.hasOwnProperty(name)) {
-            scope[name] = async (...args) => await callProc(name, args, env);
+            scope[name] = async (...args) => {
+              const result = await callProc(name, args, env);
+              return result;
+            };
           }
       }
       
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      const body = `return ( ${e} );`;
-      const fn = new Function(...scopeKeys, body);
-      return await fn(...scopeValues);
+      // Create async function that uses await properly
+      const asyncFn = new Function(...scopeKeys, `
+        return (async function() {
+          return (${e});
+        })();
+      `);
+      return await asyncFn(...scopeValues);
     };
   }
 
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = makeEval(env, PROCS);
     let i = start;
-    
-    const loopState = new Map();
 
     while(i < end){ 
       if(halted) return null;
@@ -441,7 +482,10 @@ window.addEventListener("DOMContentLoaded", () => {
         const blockEnd = i - 1;
         
         if (cond) {
-          await execRange(blockStart, blockEnd, env, insideProc);
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (insideProc && result !== undefined && result !== null) {
+            return result;
+          }
           
           if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
             i++;
@@ -472,7 +516,10 @@ window.addEventListener("DOMContentLoaded", () => {
             }
             const elseEnd = i - 1;
             
-            await execRange(elseStart, elseEnd, env, insideProc);
+            const result = await execRange(elseStart, elseEnd, env, insideProc);
+            if (insideProc && result !== undefined && result !== null) {
+              return result;
+            }
           }
         }
         continue;
@@ -758,6 +805,20 @@ PROCEDURE quadruple(x)
 
 DISPLAY(quadruple(5))`,
 
+"Procedure Call in DISPLAY":
+`PROCEDURE areaCircle(r)
+{
+  pi ← 3.14159
+  RETURN (pi * (r*r))
+}
+
+PROCEDURE areaFinder(r)
+{
+  DISPLAY("your area is: " + areaCircle(r))
+}
+
+areaFinder(5)`,
+
 "INPUT Example":
 `DISPLAY("What is your name?")
 name ← INPUT()
@@ -796,10 +857,11 @@ ELSE
   const sel = $("#samples");
   sel.innerHTML = '<option value="">📋 Load Sample...</option>' +
     Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
-  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) editor.value=samples[k]; e.target.value=""; };
+  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) { editor.value=samples[k]; updateLineNumbers(); } e.target.value=""; };
 
   editor.value = `DISPLAY("Welcome to AP CSP Console!")
 DISPLAY("Select a sample or write your code.")`;
+  updateLineNumbers();
 
   setStatus("Ready"); 
   sys("✓ Emulator ready. Press Run to execute.");
