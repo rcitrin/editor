@@ -44,15 +44,6 @@ header {
   gap: 12px;
   flex-shrink: 0;
 }
-header img {
-  display: block;
-  border: 0 !important;
-  outline: 0 !important;
-  box-shadow: none !important;
-  padding: 0;
-  margin: 0;
-  height: 24px;
-}
 header span {
   font-size: 16px;
   font-weight: 600;
@@ -61,10 +52,25 @@ header span {
 main {
   flex-grow: 1;
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 70fr 30fr;
   gap: 20px;
   padding: 20px;
   min-height: 0;
+  position: relative;
+}
+.resizer {
+  position: absolute;
+  width: 6px;
+  height: 100%;
+  background: var(--border);
+  cursor: col-resize;
+  top: 0;
+  left: calc(70% - 3px);
+  z-index: 10;
+  transition: background 0.2s;
+}
+.resizer:hover {
+  background: #5f9040;
 }
 .card {
   background: var(--panel-bg);
@@ -195,11 +201,11 @@ footer {
 
 <body>
 <header>
-  <img src="https://i.imgur.com/vzcUQr9.png" alt="Logo">
   <span>Citrin's APCSP Console</span>
 </header>
 
 <main>
+  <div class="resizer" id="resizer"></div>
   <section class="card">
      <h2>Program</h2>
     <div class="toolbar">
@@ -943,6 +949,35 @@ ELSE
   editor.value = `DISPLAY("Welcome to AP CSP Console!")
 DISPLAY("Select a sample or write your code.")`;
   updateLineNumbers();
+
+  // Resizer functionality
+  const resizer = $("#resizer");
+  const mainEl = $("main");
+  let isResizing = false;
+
+  resizer.addEventListener("mousedown", (e) => {
+    isResizing = true;
+    document.body.style.cursor = "col-resize";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isResizing) return;
+    const mainRect = mainEl.getBoundingClientRect();
+    const offsetX = e.clientX - mainRect.left - 20; // Account for padding
+    const percentage = (offsetX / (mainRect.width - 40)) * 100; // Account for padding and gap
+    if (percentage > 20 && percentage < 80) {
+      mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
+      resizer.style.left = `calc(${percentage}% - 3px)`;
+    }
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = "";
+    }
+  });
 
   setStatus("Ready"); 
   sys("✓ Emulator ready. Press Run to execute.");
