@@ -19,12 +19,21 @@
   --console-log: #d4d4d4;
   --console-err: #ff8c8c;
   --console-sys: #92a4c1;
-  --editor-text: #d4d4d4;
-  --editor-caret: #aeafad;
+
+  /* Syntax highlight colors (Replit-dark-ish) */
+  --kw: #c792ea;       /* Keywords */
+  --str: #c3e88d;      /* Strings */
+  --num: #82aaff;      /* Numbers */
+  --op: #f78c6c;       /* Operators */
+  --comment: #676e95;  /* Comments */
+  --proc: #89ddff;     /* Procedure names */
+  --ident: #d4d4d4;    /* Identifiers */
 }
+
 * { box-sizing: border-box; }
 html, body { border: 0; padding: 0; margin: 0; }
 img { border: 0 !important; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -34,6 +43,7 @@ body {
   flex-direction: column;
   height: 100vh;
 }
+
 header {
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
@@ -47,8 +57,8 @@ header {
 header span {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary);
 }
+
 main {
   flex-grow: 1;
   display: grid;
@@ -58,6 +68,8 @@ main {
   min-height: 0;
   position: relative;
 }
+
+/* Resizer */
 .resizer {
   position: absolute;
   width: 6px;
@@ -69,9 +81,9 @@ main {
   z-index: 10;
   transition: background 0.2s;
 }
-.resizer:hover {
-  background: #5f9040;
-}
+.resizer:hover { background: #5f9040; }
+
+/* Cards */
 .card {
   background: var(--panel-bg);
   border: 1px solid var(--border);
@@ -90,6 +102,8 @@ main {
   background: #333333;
   flex-shrink: 0;
 }
+
+/* Toolbar */
 .toolbar {
   display: flex;
   gap: 8px;
@@ -124,6 +138,8 @@ button.secondary {
   color: var(--run-btn-text);
   border-color: #4a5568;
 }
+
+/* Modal */
 .modal {
   display: none;
   position: fixed;
@@ -138,55 +154,108 @@ button.secondary {
   z-index: 1000;
   text-align: center;
 }
-.modal.show {
-  display: block;
-}
+.modal.show { display: block; }
+
+/* Editor wrapper (with highlight layer) */
 .editor-wrapper {
   flex-grow: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
+
+/* Line numbers */
 .line-numbers {
   background: #1a1a1a;
   color: #858585;
   padding: 12px 8px;
   text-align: right;
   user-select: none;
-  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace;
   border-right: 1px solid var(--border);
   overflow: hidden;
   min-width: 40px;
   white-space: pre;
 }
-textarea {
-  flex-grow: 1;
-  width: 100%;
-  height: 100%; 
-  resize: none; 
-  background: var(--editor-bg);
-  color: var(--editor-text);
-  border: 0;
-  outline: none;
+
+/* Highlighter layer */
+#highlight {
+  position: absolute;
+  inset: 0;
+  left: 40px; /* line numbers width */
   padding: 12px 14px;
-  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
-  caret-color: var(--editor-caret);
-  overflow: auto;
+  background: var(--editor-bg);
+  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
 }
+
+/* Textarea */
+textarea {
+  position: absolute;
+  inset: 0;
+  left: 40px; /* line numbers width */
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+  flex-grow: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px 14px;
+  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace;
+  overflow: auto;
+  z-index: 2;
+}
+
+/* Syntax Tokens */
+.kw      { color: var(--kw); }
+.str     { color: var(--str); }
+.num     { color: var(--num); }
+.op      { color: var(--op); }
+.comment { color: var(--comment); }
+.proc    { color: var(--proc); }
+.ident   { color: var(--ident); }
+
+/* Console */
 .console {
   flex-grow: 1;
   overflow: auto;
   padding: 12px;
-  font: 14px/1.5 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  font: 14px/1.5 'JetBrains Mono', 'Fira Code';
   background: var(--console-bg);
   white-space: pre-wrap;
 }
 .log { color: var(--console-log); }
 .err { color: var(--console-err); }
 .sys { color: var(--console-sys); }
-.prompt-wrap { display: none; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--panel-bg); align-items: center; flex-shrink: 0; }
-.prompt-wrap input { flex: 1; background: #3c3f41; color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
+
+.prompt-wrap {
+  display: none;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+.prompt-wrap input {
+  flex: 1;
+  background: #3c3f41;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
 .prompt-wrap.show { display: flex; }
-.status { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--panel-bg); flex-shrink: 0; }
+
+.status {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
 footer {
   color: var(--text-muted);
   text-align: center;
@@ -194,7 +263,6 @@ footer {
   padding: 10px;
   background: var(--panel-bg);
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
 }
 </style>
 </head>
@@ -206,6 +274,7 @@ footer {
 
 <main>
   <div class="resizer" id="resizer"></div>
+
   <section class="card">
      <h2>PROGRAM (INPUT)</h2>
     <div class="toolbar">
@@ -216,8 +285,10 @@ footer {
       <select id="samples"></select>
       <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
     </div>
+
     <div class="editor-wrapper">
       <div class="line-numbers" id="lineNumbers"></div>
+      <div id="highlight"></div>
       <textarea id="editor"></textarea>
     </div>
   </section>
@@ -234,32 +305,97 @@ footer {
   </section>
 </main>
 
+<div id="copyModal" class="modal">Code copied to clipboard</div>
+
 <footer>Citrin's APCSP Console</footer>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   const $ = s => document.querySelector(s);
 
-  const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
+  const logEl = $("#console"),
+        statusEl = $("#status"),
+        editor = $("#editor"),
+        highlightEl = $("#highlight");
   const lineNumbers = $("#lineNumbers");
-  const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
-  const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
+  const promptWrap = $("#promptWrap"),
+        promptInput = $("#promptInput");
+  const promptOk = $("#promptOk"),
+        promptCancel = $("#promptCancel");
   let halted = false, inputResolve=null, inputReject=null;
 
+  /* ---------- Line numbers ---------- */
   function updateLineNumbers() {
-    const lines = editor.value.split('\n').length;
-    lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+    const lines = editor.value.split('\n').length || 1;
+    lineNumbers.textContent = Array.from({length: lines}, (_, i) => i + 1).join('\n');
   }
 
-  editor.addEventListener('input', updateLineNumbers);
-  editor.addEventListener('scroll', () => {
-    lineNumbers.scrollTop = editor.scrollTop;
+  editor.addEventListener('input', () => {
+    updateLineNumbers();
+    updateHighlight();
   });
 
-  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=String(m);logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-  const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
+  editor.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editor.scrollTop;
+    highlightEl.scrollTop = editor.scrollTop;
+    highlightEl.scrollLeft = editor.scrollLeft;
+  });
+
+  /* ---------- Console output + dumb suggestions ---------- */
+  const out = (m,c="log") => {
+    const d = document.createElement("div");
+    d.className = "line " + c;
+    d.textContent = String(m);
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  function getSuggestions(message) {
+    const s = String(message);
+    const tips = [];
+
+    if (/ELSE IF/i.test(s)) {
+      tips.push("AP CSP pseudocode does not support ELSE IF. Use a separate IF or nest IFs inside ELSE.");
+    }
+    if (/Unknown statement/i.test(s) || /Expression contains unsupported characters/i.test(s)) {
+      tips.push("Check for typos or extra characters. Make sure each IF/REPEAT/PROCEDURE has matching { and }.");
+    }
+    if (/Bad PROCEDURE syntax/i.test(s)) {
+      tips.push("Procedures must look like: PROCEDURE name(param1, param2)");
+    }
+    if (/must be followed by {/i.test(s)) {
+      tips.push("Add '{' on the line after IF, ELSE, REPEAT, or PROCEDURE.");
+    }
+    if (/RETURN outside procedure/i.test(s)) {
+      tips.push("RETURN can only be used inside a PROCEDURE.");
+    }
+    if (/List index out of bounds/i.test(s) || /Index .* out of bounds/i.test(s)) {
+      tips.push("Lists are 1-based in AP CSP: valid indices are 1..LENGTH(list).");
+    }
+    if (/is not a list/i.test(s)) {
+      tips.push("APPEND/INSERT/REMOVE/LENGTH only work on list variables like: myList ← [1,2,3]");
+    }
+    if (/Unknown procedure/i.test(s)) {
+      tips.push("Call procedures only after they are defined, and make sure the spelling matches exactly.");
+    }
+    if (/Parse Error:/.test(s)) {
+      tips.push("Look near the line in the message. Common issues: missing ')', missing ',', or a bad PROCEDURE definition.");
+    }
+
+    return tips;
+  }
+
+  const log = m => out(m, "log");
+  const err = m => {
+    out(m, "err");
+    const tips = getSuggestions(m);
+    tips.forEach(t => out("Hint: " + t, "sys"));
+  };
+  const sys = m => out(m, "sys");
+
   const setStatus = s => statusEl.textContent = s;
 
+  /* ---------- Input prompt ---------- */
   function showPrompt(label){ 
     promptInput.value=""; 
     promptInput.placeholder=label||"Input"; 
@@ -272,6 +408,7 @@ window.addEventListener("DOMContentLoaded", () => {
   promptCancel.onclick=()=>{ if(inputReject){ inputReject(new Error("Input cancelled")); hidePrompt(); inputResolve=null; inputReject=null; } };
   promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
 
+  /* ---------- Preprocess & parse ---------- */
   function preprocess(src){
     return src.split(/\r?\n/).map((raw,idx)=>{
       const s = raw
@@ -317,8 +454,9 @@ window.addEventListener("DOMContentLoaded", () => {
     return procs;
   }
 
-  let LINES=[], PROCS=null, ENV=null;
+  let LINES = [], PROCS = null, ENV = null;
 
+  /* ---------- Expression eval ---------- */
   function makeEval(env, procs){
     const safe=/^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
     
@@ -424,6 +562,7 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  /* ---------- Execution engine ---------- */
   async function execRange(start, end, env, insideProc=false){
     const evalExpr = makeEval(env, PROCS);
     let i = start;
@@ -700,6 +839,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  /* ---------- Buttons & keyboard ---------- */
   $("#runBtn").onclick = ()=> run(editor.value);
   $("#stopBtn").onclick = ()=> { halted=true; if(inputReject){inputReject(new Error("Stopped"));hidePrompt();} setStatus("Stopped"); };
   
@@ -707,9 +847,13 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       await navigator.clipboard.writeText(editor.value);
       const modal = $("#copyModal");
-      modal.classList.add("show");
-      setTimeout(() => modal.classList.remove("show"), 2000);
-    } catch (err) {
+      if (modal) {
+        modal.classList.add("show");
+        setTimeout(() => modal.classList.remove("show"), 1500);
+      } else {
+        sys("Code copied to clipboard.");
+      }
+    } catch (e) {
       err("Failed to copy code");
     }
   };
@@ -722,6 +866,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
   });
 
+  /* ---------- Samples ---------- */
   const samples = {
 "Hello World":
 `DISPLAY("Hello, World!")`,
@@ -944,13 +1089,87 @@ ELSE
   const sel = $("#samples");
   sel.innerHTML = '<option value="">📋 Load Sample...</option>' +
     Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
-  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) { editor.value=samples[k]; updateLineNumbers(); } e.target.value=""; };
+  sel.onchange = e=>{
+    const k=e.target.value;
+    if(samples[k]) {
+      editor.value=samples[k];
+      updateLineNumbers();
+      updateHighlight();
+    }
+    e.target.value="";
+  };
 
-  editor.value = `DISPLAY("Welcome to AP CSP Console!")
-DISPLAY("Select a sample or write your code.")`;
-  updateLineNumbers();
+  /* ---------- Syntax highlighter ---------- */
+  function escapeHTML(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
 
-  // Resizer functionality
+  function highlightLine(line) {
+    const original = line;
+    let html = escapeHTML(original);
+
+    // Comments (# or //)
+    let commentHTML = "";
+    let codeHTML = html;
+    const hashIdx = html.indexOf("#");
+    const slIdx = html.indexOf("//");
+    let cut = -1;
+    if (hashIdx !== -1 && slIdx !== -1) cut = Math.min(hashIdx, slIdx);
+    else if (hashIdx !== -1) cut = hashIdx;
+    else if (slIdx !== -1) cut = slIdx;
+
+    if (cut !== -1) {
+      codeHTML = html.slice(0, cut);
+      commentHTML = html.slice(cut);
+      commentHTML = `<span class="comment">${commentHTML}</span>`;
+    }
+
+    // Strings
+    codeHTML = codeHTML.replace(/"([^"\\]|\\.)*"/g, match => {
+      return `<span class="str">${match}</span>`;
+    });
+
+    // Numbers
+    codeHTML = codeHTML.replace(/\b\d+(\.\d+)?\b/g, match => {
+      return `<span class="num">${match}</span>`;
+    });
+
+    // PROCEDURE names
+    codeHTML = codeHTML.replace(
+      /\bPROCEDURE\s+([A-Za-z_]\w*)/g,
+      (m, name) => `<span class="kw">PROCEDURE</span> <span class="proc">${name}</span>`
+    );
+
+    // Keywords
+    const kw = [
+      "IF","ELSE","REPEAT","UNTIL","TIMES","FOR","EACH","IN",
+      "DISPLAY","RETURN","RANDOM","INPUT",
+      "APPEND","INSERT","REMOVE","LENGTH",
+      "AND","OR","NOT","true","false"
+    ];
+    const kwRegex = new RegExp("\\b(" + kw.join("|") + ")\\b", "g");
+    codeHTML = codeHTML.replace(kwRegex, '<span class="kw">$1</span>');
+
+    // Operators
+    const opRegex = /(←|<-|<=|≥|>=|≠|!=|==|<|>|\+|-|\*|\/|%)/g;
+    codeHTML = codeHTML.replace(opRegex, '<span class="op">$1</span>');
+
+    if (commentHTML) {
+      return codeHTML + commentHTML;
+    }
+    return codeHTML;
+  }
+
+  function updateHighlight() {
+    const code = editor.value || "";
+    const lines = code.split("\n").map(highlightLine).join("\n");
+    highlightEl.innerHTML = lines || "&nbsp;";
+  }
+
+  /* ---------- Resizer ---------- */
   const resizer = $("#resizer");
   const mainEl = $("main");
   let isResizing = false;
@@ -964,8 +1183,8 @@ DISPLAY("Select a sample or write your code.")`;
   document.addEventListener("mousemove", (e) => {
     if (!isResizing) return;
     const mainRect = mainEl.getBoundingClientRect();
-    const offsetX = e.clientX - mainRect.left - 20; // Account for padding
-    const percentage = (offsetX / (mainRect.width - 40)) * 100; // Account for padding and gap
+    const offsetX = e.clientX - mainRect.left - 20; // padding
+    const percentage = (offsetX / (mainRect.width - 40)) * 100;
     if (percentage > 20 && percentage < 80) {
       mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
       resizer.style.left = `calc(${percentage}% - 3px)`;
@@ -979,6 +1198,11 @@ DISPLAY("Select a sample or write your code.")`;
     }
   });
 
+  /* ---------- Init ---------- */
+  editor.value = `DISPLAY("Welcome to AP CSP Console!")
+DISPLAY("Select a sample or write your code.")`;
+  updateLineNumbers();
+  updateHighlight();
   setStatus("Ready"); 
   sys("✓ Emulator ready. Press Run to execute.");
 });
