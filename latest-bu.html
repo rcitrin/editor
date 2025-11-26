@@ -3,249 +3,910 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Citrin's APCSP Console</title>
+<title>Citrin's APCSP Console (v2.0)</title>
 <style>
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+
 :root {
   --bg: #000000;
-  --panel-bg: #1a1a1a;
-  --border: #3c3c3c;
-  --text-primary: #d4d4d4;
-  --text-muted: #808080;
-  --run-btn-bg: #5f9040;
-  --run-btn-text: #ffffff;
-  --stop-btn-bg: #a33b3b;
-  --console-bg: #1a1a1a;
-  --editor-bg: #1a1a1a;
-  --console-log: #d4d4d4;
-  --console-err: #ff8c8c;
-  --console-sys: #92a4c1;
-  --editor-text: #d4d4d4;
-  --editor-caret: #aeafad;
+  --bg-elevated: #0a0a0a;
+  --panel-bg: #111111;
+  --panel-bg-hover: #1a1a1a;
+  --border: #222222;
+  --border-subtle: #1a1a1a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+
+  /* RUN BUTTON (olive green) */
+  --accent: #93c83a;
+  --accent-hover: #7FAD5D;
+  --accent-glow: rgba(101, 136, 26, 0.25);
+
+  /* STOP BUTTON (pumpkin orange) */
+  --danger: #B5514D;
+  --danger-hover: #B5514D;
+
+  /* CURSOR (same pumpkin orange) */
+  --editor-caret: #519BB0;
+
+  /* APCSP TEXT (brick red) */
+  --gradient-1: linear-gradient(135deg, #007BA7 0%, #007BA7 100%);
 }
-* { box-sizing: border-box; }
-html, body { border: 0; padding: 0; margin: 0; }
-img { border: 0 !important; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { 
+  margin: 0; 
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  margin: 0;
   background: var(--bg);
   color: var(--text-primary);
-  font: 16px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
-header {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
   background: var(--bg);
-  color: var(--text-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Header */
+header {
+  padding: 16px 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0;
 }
-header span {
-  font-size: 16px;
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: #8A3F8E;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: #000;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.logo-text {
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: -0.5px;
 }
+
+.logo-text span {
+  background: var(--gradient-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Main Layout */
 main {
-  flex-grow: 1;
+  flex: 1;
   display: grid;
-  grid-template-columns: 70fr 30fr;
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
   min-height: 0;
   position: relative;
 }
+
 .resizer {
   position: absolute;
-  width: 6px;
+  width: 12px;
   height: 100%;
-  background: var(--border);
+  background: transparent;
   cursor: col-resize;
   top: 0;
-  left: calc(70% - 3px);
-  z-index: 10;
-  transition: background 0.2s;
+  left: calc(50% - 6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.resizer:hover {
-  background: #5f9040;
+
+.resizer::after {
+  content: '';
+  width: 4px;
+  height: 48px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: all 0.2s ease;
 }
-.card {
+
+.resizer:hover::after {
+  background: var(--accent);
+  height: 64px;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* Panels */
+.panel {
   background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
-.card h2 {
-  font-size: 14px;
-  margin: 0;
-  padding: 8px 12px;
-  color: var(--text-primary);
+
+.panel-header {
+  padding: 12px 16px;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
-  background: #333333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
 }
+
+.panel-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.panel-header .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* Toolbar */
 .toolbar {
-  display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
+  display: flex;
   align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
-button, select {
-  background: #3c3f41;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
+
+.toolbar-group {
+  display: flex;
+  gap: 6px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+/* Buttons */
+button {
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+button:hover {
+  background: var(--panel-bg-hover);
+  border-color: #333;
+}
+
 button.primary {
-  background: var(--run-btn-bg);
-  color: var(--run-btn-text);
-  border-color: var(--run-btn-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
 }
+
+button.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
 button.danger {
-  background: var(--stop-btn-bg);
-  color: var(--run-btn-text);
-  border-color: var(--stop-btn-bg);
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
 }
-button.secondary {
-  background: #4a5568;
-  color: var(--run-btn-text);
-  border-color: #4a5568;
+
+button.danger:hover {
+  background: var(--danger);
+  color: #fff;
 }
-.modal {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+button.ghost:hover {
+  background: var(--panel-bg-hover);
+}
+
+/* Dropdown Menu System */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.dropdown-trigger::after {
+  content: '▾';
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 20px 30px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
   z-index: 1000;
-  text-align: center;
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
 }
-.modal.show {
+
+.dropdown-menu.show {
   display: block;
+  animation: dropdownIn 0.15s ease;
 }
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-category {
+  padding: 8px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-category::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-item:hover {
+  background: var(--panel-bg-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-item .icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.dropdown-item.cat-variables .icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.dropdown-item.cat-conditionals .icon { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.dropdown-item.cat-loops .icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.dropdown-item.cat-procedures .icon { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+.dropdown-item.cat-other .icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+/* Editor */
 .editor-wrapper {
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   overflow: hidden;
+  background: var(--editor-bg);
 }
+
 .line-numbers {
-  background: #1a1a1a;
-  color: #858585;
-  padding: 12px 8px;
+  padding: 16px 12px;
+  background: var(--editor-bg);
+  color: var(--text-muted);
+font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;    font-size: 14px;
+  line-height: 1.6;
   text-align: right;
   user-select: none;
-  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
   border-right: 1px solid var(--border);
+  min-width: 48px;
   overflow: hidden;
-  min-width: 40px;
   white-space: pre;
 }
+
 textarea {
-  flex-grow: 1;
-  width: 100%;
-  height: 100%; 
-  resize: none; 
+  flex: 1;
+  padding: 16px;
   background: var(--editor-bg);
   color: var(--editor-text);
-  border: 0;
+  border: none;
   outline: none;
-  padding: 12px 14px;
-  font: 14px/1.45 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
   caret-color: var(--editor-caret);
   overflow: auto;
 }
-.console {
-  flex-grow: 1;
-  overflow: auto;
-  padding: 12px;
-  font: 14px/1.5 'JetBrains Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
-  background: var(--console-bg);
-  white-space: pre-wrap;
-}
-.log { color: var(--console-log); }
-.err { color: var(--console-err); }
-.sys { color: var(--console-sys); }
-.prompt-wrap { display: none; gap: 8px; padding: 10px; border-top: 1px solid var(--border); background: var(--panel-bg); align-items: center; flex-shrink: 0; }
-.prompt-wrap input { flex: 1; background: #3c3f41; color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; }
-.prompt-wrap.show { display: flex; }
-.status { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--panel-bg); flex-shrink: 0; }
-footer {
+
+textarea::placeholder {
   color: var(--text-muted);
+}
+
+/* Console */
+.console {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: var(--console-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console .line {
+  padding: 2px 0;
+  border-radius: 4px;
+}
+
+.console .log { color: var(--console-log); }
+.console .err { color: var(--console-err); }
+.console .sys { color: var(--console-sys); }
+.console .help { 
+  color: var(--console-help); 
+  background: rgba(251, 191, 36, 0.1);
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border-left: 3px solid var(--console-help);
+}
+.console .help-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.console .help-code {
+  background: rgba(0,0,0,0.3);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  white-space: pre;
+}
+
+/* Prompt */
+.prompt-wrap {
+  display: none;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.prompt-wrap.show {
+  display: flex;
+}
+
+.prompt-wrap input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.prompt-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Status Bar */
+.status {
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.running {
+  background: var(--accent);
+  animation: pulse 1s infinite;
+}
+
+.status-dot.error {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Footer */
+footer {
+  padding: 12px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
   text-align: center;
   font-size: 12px;
-  padding: 10px;
-  background: var(--panel-bg);
-  border-top: 1px solid var(--border);
+  color: var(--text-muted);
   flex-shrink: 0;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 2000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Keyboard Hint */
+.kbd-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+kbd {
+  padding: 2px 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+}
+
+/* Help Modal */
+.help-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+}
+
+.help-modal.show {
+  display: flex;
+}
+
+.help-content {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+.help-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.help-body {
+  padding: 24px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.help-section pre {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  
+  .resizer {
+    width: 100%;
+    height: 12px;
+    top: calc(50% - 6px);
+    left: 0;
+    cursor: row-resize;
+  }
+  
+  .resizer::after {
+    width: 48px;
+    height: 4px;
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .kbd-hint {
+    display: none;
+  }
 }
 </style>
 </head>
 
 <body>
 <header>
-  <span>Citrin's APCSP Console</span>
+  <div class="logo">
+    <div class="logo-icon">C</div>
+    <div class="logo-text">Citrin's <span>APCSP</span> Console (v2.0)</div>
+  </div>
+  <div class="header-actions">
+    <button class="ghost" id="helpBtn" title="Syntax Reference">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      Help
+    </button>
+  </div>
 </header>
 
 <main>
   <div class="resizer" id="resizer"></div>
-  <section class="card">
-     <h2>PROGRAM (INPUT)</h2>
+  
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Program Editor (INPUT)</h2>
+    </div>
     <div class="toolbar">
-      <button class="primary" id="runBtn">▶ Run</button>
-      <button id="stopBtn" class="danger">■ Stop</button>
-      <button id="copyBtn" class="secondary">📋 Copy Code</button>
-      <button id="apmlBtn" class="secondary">🔗 Open APML</button>
-      <select id="samples"></select>
-      <span style="margin-left:auto; color: var(--text-muted); font-size: 13px;">Ctrl/⌘ + Enter</span>
+      <div class="toolbar-group">
+        <button class="primary" id="runBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Run
+        </button>
+        <button class="danger" id="stopBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+          Stop
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="toolbar-group">
+        <button id="copyBtn" class="ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+        <button id="apmlBtn" class="ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          APML
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="dropdown">
+        <button class="dropdown-trigger" id="samplesBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Examples
+        </button>
+        <div class="dropdown-menu" id="samplesMenu"></div>
+      </div>
+      
+      <div class="kbd-hint">
+        <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run
+      </div>
     </div>
     <div class="editor-wrapper">
       <div class="line-numbers" id="lineNumbers"></div>
-      <textarea id="editor"></textarea>
+      <textarea id="editor" placeholder="Write your APCSP pseudocode here..." spellcheck="false"></textarea>
     </div>
   </section>
 
-  <section class="card">
-    <h2>CONSOLE (OUTPUT)</h2>
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Console (Output)</h2>
+    </div>
     <div class="console" id="console"></div>
     <div class="prompt-wrap" id="promptWrap">
       <input id="promptInput" placeholder="Enter input…" />
-      <button id="promptOk">OK</button>
+      <button id="promptOk" class="primary">Submit</button>
       <button id="promptCancel">Cancel</button>
     </div>
-    <div class="status" id="status">Idle</div>
+    <div class="status" id="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
   </section>
 </main>
 
-<footer>Citrin's APCSP Console</footer>
+<footer>
+  Citrin's APCSP Console • Built for AP Computer Science Principles
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<div class="help-modal" id="helpModal">
+  <div class="help-content">
+    <div class="help-header">
+      <h3>📖 Syntax Reference</h3>
+      <button class="ghost" id="closeHelp">✕</button>
+    </div>
+    <div class="help-body">
+      <div class="help-section">
+        <h4>Variables</h4>
+        <pre>variableName ← value
+variableName ← expression</pre>
+      </div>
+      <div class="help-section">
+        <h4>Display Output</h4>
+        <pre>DISPLAY(expression)
+DISPLAY("Hello " + name)</pre>
+      </div>
+      <div class="help-section">
+        <h4>User Input</h4>
+        <pre>variable ← INPUT()</pre>
+      </div>
+      <div class="help-section">
+        <h4>Conditionals</h4>
+        <pre>IF (condition)
+{
+  // statements
+}
+
+IF (condition)
+{
+  // statements
+}
+ELSE
+{
+  // statements
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>Loops</h4>
+        <pre>REPEAT n TIMES
+{
+  // statements
+}
+
+REPEAT UNTIL (condition)
+{
+  // statements
+}
+
+FOR EACH item IN list
+{
+  // statements
+}
+
+FOR i ← start TO end
+{
+  // use i as counter
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>Lists</h4>
+        <pre>myList ← [1, 2, 3]
+myList[1]  // first element (1-indexed)
+LENGTH(myList)
+APPEND(myList, value)
+INSERT(myList, index, value)
+REMOVE(myList, index)</pre>
+      </div>
+      <div class="help-section">
+        <h4>Procedures</h4>
+        <pre>PROCEDURE name(param1, param2)
+{
+  // statements
+  RETURN(value)  // optional
+}
+
+name(arg1, arg2)  // call procedure</pre>
+      </div>
+      <div class="help-section">
+        <h4>Operators</h4>
+        <pre>Arithmetic: +  -  *  /  MOD
+Comparison: =  ≠  <  >  ≤  ≥
+            (or: !=  <=  >=)
+Logical: AND  OR  NOT</pre>
+      </div>
+      <div class="help-section">
+        <h4>Built-in Functions</h4>
+        <pre>RANDOM(a, b)  // random integer from a to b
+LENGTH(list)  // length of list</pre>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 window.addEventListener("DOMContentLoaded", () => {
   const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
 
-  const logEl = $("#console"), statusEl = $("#status"), editor = $("#editor");
+  const logEl = $("#console"), statusText = $("#statusText"), statusDot = $("#statusDot"), editor = $("#editor");
   const lineNumbers = $("#lineNumbers");
   const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
   const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
-  let halted = false, inputResolve=null, inputReject=null;
+  const toast = $("#toast");
+  const helpModal = $("#helpModal");
+  
+  let halted = false, inputResolve = null, inputReject = null;
 
+  // Toast notification
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2000);
+  }
+
+  // Line numbers
   function updateLineNumbers() {
     const lines = editor.value.split('\n').length;
     lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
@@ -256,47 +917,311 @@ window.addEventListener("DOMContentLoaded", () => {
     lineNumbers.scrollTop = editor.scrollTop;
   });
 
-  const out=(m,c="log")=>{const d=document.createElement("div");d.className="line "+c;d.textContent=String(m);logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-  const log=m=>out(m,"log"), err=m=>out(m,"err"), sys=m=>out(m,"sys");
-  const setStatus = s => statusEl.textContent = s;
+  // Console output
+  const out = (m, c = "log") => {
+    const d = document.createElement("div");
+    d.className = "line " + c;
+    if (typeof m === 'object') {
+      d.innerHTML = m.html;
+    } else {
+      d.textContent = String(m);
+    }
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  
+  const log = m => out(m, "log");
+  const err = m => out(m, "err");
+  const sys = m => out(m, "sys");
+  const help = (title, description, example) => {
+    out({
+      html: `<div class="help-title">💡 ${title}</div>${description}<div class="help-code">${example}</div>`
+    }, "help");
+  };
 
-  function showPrompt(label){ 
-    promptInput.value=""; 
-    promptInput.placeholder=label||"Input"; 
-    promptWrap.classList.add("show"); 
-    promptInput.focus(); 
-    return new Promise((res,rej)=>{inputResolve=res;inputReject=rej;}); 
+  const setStatus = (s, state = "idle") => {
+    statusText.textContent = s;
+    statusDot.className = "status-dot";
+    if (state === "running") statusDot.classList.add("running");
+    if (state === "error") statusDot.classList.add("error");
+  };
+
+  // Help system for syntax errors
+  const syntaxHelp = {
+    procedure: {
+      title: "PROCEDURE Syntax Error",
+      desc: "Procedures must follow this exact format:",
+      example: `PROCEDURE myFunction(param1, param2)
+{
+  // your code here
+  RETURN(value)  // optional
+}`
+    },
+    if: {
+      title: "IF Statement Syntax Error",
+      desc: "IF statements require parentheses around the condition:",
+      example: `IF (condition)
+{
+  // statements
+}
+ELSE
+{
+  // statements
+}`
+    },
+    repeatTimes: {
+      title: "REPEAT TIMES Syntax Error",
+      desc: "The REPEAT n TIMES loop format:",
+      example: `REPEAT 5 TIMES
+{
+  // statements
+}`
+    },
+    repeatUntil: {
+      title: "REPEAT UNTIL Syntax Error",
+      desc: "The REPEAT UNTIL loop format:",
+      example: `REPEAT UNTIL (condition)
+{
+  // statements
+}`
+    },
+    forEach: {
+      title: "FOR EACH Syntax Error",
+      desc: "The FOR EACH loop format:",
+      example: `FOR EACH item IN myList
+{
+  DISPLAY(item)
+}`
+    },
+    forLoop: {
+      title: "FOR Loop Syntax Error",
+      desc: "The FOR i loop format:",
+      example: `FOR i ← 1 TO 10
+{
+  DISPLAY(i)
+}`
+    },
+    assignment: {
+      title: "Assignment Syntax Error",
+      desc: "Use the arrow operator for assignment:",
+      example: `variable ← value
+variable ← expression
+myList[1] ← newValue`
+    },
+    display: {
+      title: "DISPLAY Syntax Error",
+      desc: "DISPLAY requires parentheses:",
+      example: `DISPLAY("Hello World")
+DISPLAY(variable)
+DISPLAY("Result: " + value)`
+    },
+    list: {
+      title: "List Syntax Error",
+      desc: "Lists use 1-based indexing:",
+      example: `myList ← [10, 20, 30]
+DISPLAY(myList[1])  // outputs 10
+APPEND(myList, 40)
+INSERT(myList, 2, 15)
+REMOVE(myList, 1)`
+    },
+    return: {
+      title: "RETURN Syntax Error",
+      desc: "RETURN must be inside a procedure:",
+      example: `PROCEDURE square(n)
+{
+  RETURN(n * n)
+}`
+    },
+    block: {
+      title: "Block Syntax Error",
+      desc: "Code blocks must use curly braces on their own lines:",
+      example: `IF (condition)
+{
+  // code here
+}
+
+// Make sure every { has a matching }
+// and they are properly nested`
+    },
+    brace: {
+      title: "Brace Mismatch Error",
+      desc: "Every opening { must have a matching closing }:",
+      example: `PROCEDURE example()
+{
+  IF (condition)
+  {
+    // nested code
   }
-  function hidePrompt(){ promptWrap.classList.remove("show"); }
-  promptOk.onclick=()=>{ if(inputResolve){ inputResolve(promptInput.value); hidePrompt(); inputResolve=null; inputReject=null; } };
-  promptCancel.onclick=()=>{ if(inputReject){ inputReject(new Error("Input cancelled")); hidePrompt(); inputResolve=null; inputReject=null; } };
-  promptInput.addEventListener("keydown", e=>{ if(e.key==="Enter")promptOk.click(); if(e.key==="Escape")promptCancel.click(); });
+}
 
-  function preprocess(src){
-    return src.split(/\r?\n/).map((raw,idx)=>{
+// Check that:
+// 1. Every { has a matching }
+// 2. Braces are properly nested
+// 3. No extra or missing braces`
+    }
+  };
+
+  function showSyntaxHelp(type) {
+    const h = syntaxHelp[type];
+    if (h) {
+      help(h.title, h.desc, h.example);
+    }
+  }
+
+  function detectAndShowHelp(errorMsg, line) {
+    const lowerErr = errorMsg.toLowerCase();
+    const lowerLine = line ? line.toLowerCase() : "";
+    
+    if (lowerErr.includes("unclosed") || lowerErr.includes("missing closing") || lowerErr.includes("unexpected }") || lowerErr.includes("unexpected {") || lowerErr.includes("no matching")) {
+      showSyntaxHelp("brace");
+    } else if (lowerErr.includes("procedure") || lowerLine.startsWith("procedure")) {
+      showSyntaxHelp("procedure");
+    } else if (lowerErr.includes("if") || lowerLine.startsWith("if")) {
+      showSyntaxHelp("if");
+    } else if (lowerErr.includes("repeat") && lowerErr.includes("times")) {
+      showSyntaxHelp("repeatTimes");
+    } else if (lowerErr.includes("repeat") && lowerErr.includes("until")) {
+      showSyntaxHelp("repeatUntil");
+    } else if (lowerErr.includes("for each") || lowerLine.startsWith("for each")) {
+      showSyntaxHelp("forEach");
+    } else if (lowerErr.includes("for ") || lowerLine.match(/^for\s+\w+\s*(←|<-)/i)) {
+      showSyntaxHelp("forLoop");
+    } else if (lowerErr.includes("return")) {
+      showSyntaxHelp("return");
+    } else if (lowerErr.includes("display")) {
+      showSyntaxHelp("display");
+    } else if (lowerErr.includes("list") || lowerErr.includes("index") || lowerErr.includes("append") || lowerErr.includes("insert") || lowerErr.includes("remove")) {
+      showSyntaxHelp("list");
+    } else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) {
+      showSyntaxHelp("assignment");
+    } else if (lowerErr.includes("{") || lowerErr.includes("}") || lowerErr.includes("block") || lowerErr.includes("followed by")) {
+      showSyntaxHelp("block");
+    }
+  }
+
+  // Input prompt
+  function showPrompt(label) {
+    promptInput.value = "";
+    promptInput.placeholder = label || "Input";
+    promptWrap.classList.add("show");
+    promptInput.focus();
+    return new Promise((res, rej) => { inputResolve = res; inputReject = rej; });
+  }
+  
+  function hidePrompt() { promptWrap.classList.remove("show"); }
+  
+  promptOk.onclick = () => {
+    if (inputResolve) {
+      inputResolve(promptInput.value);
+      hidePrompt();
+      inputResolve = null;
+      inputReject = null;
+    }
+  };
+  
+  promptCancel.onclick = () => {
+    if (inputReject) {
+      inputReject(new Error("Input cancelled"));
+      hidePrompt();
+      inputResolve = null;
+      inputReject = null;
+    }
+  };
+  
+  promptInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") promptOk.click();
+    if (e.key === "Escape") promptCancel.click();
+  });
+
+  // Preprocessor
+  function preprocess(src) {
+    return src.split(/\r?\n/).map((raw, idx) => {
       const s = raw
-        .replace(/#.*$/,"").replace(/\/\/.*$/,"") 
-        .replace(/\t/g,"    ").trim(); 
+        .replace(/#.*$/, "").replace(/\/\/.*$/, "")
+        .replace(/\t/g, "    ").trim();
       return { idx, raw, s };
     });
   }
 
-  function parseProcedures(lines){
+  // Brace validation
+  function validateBraces(lines) {
+    let depth = 0;
+    let expectingOpen = false;
+    let lastConstruct = null;
+    let lastConstructLine = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const { s, idx } = lines[i];
+      if (!s) continue;
+      
+      // Check if this line is a construct that requires a following {
+      if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(s) && !s.includes("{")) {
+        if (expectingOpen) {
+          throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+        }
+        expectingOpen = true;
+        lastConstruct = s.match(/^(\w+)/i)[1].toUpperCase();
+        lastConstructLine = idx + 1;
+        continue;
+      }
+      
+      if (s === "{") {
+        if (!expectingOpen && depth === 0) {
+          // Check if previous non-empty line was a construct
+          let foundConstruct = false;
+          for (let j = i - 1; j >= 0; j--) {
+            if (lines[j].s) {
+              if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(lines[j].s)) {
+                foundConstruct = true;
+              }
+              break;
+            }
+          }
+          if (!foundConstruct) {
+            throw `Unexpected { at line ${idx + 1} - no matching control structure`;
+          }
+        }
+        expectingOpen = false;
+        depth++;
+      } else if (s === "}") {
+        if (expectingOpen) {
+          throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found } at line ${idx + 1}`;
+        }
+        depth--;
+        if (depth < 0) {
+          throw `Unexpected } at line ${idx + 1} - no matching opening brace`;
+        }
+      } else if (expectingOpen) {
+        throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+      }
+    }
+    
+    if (depth > 0) {
+      throw `Missing closing } - ${depth} unclosed block(s). Check that all IF, ELSE, REPEAT, FOR, and PROCEDURE blocks are properly closed`;
+    }
+    
+    if (expectingOpen) {
+      throw `${lastConstruct} at line ${lastConstructLine} must be followed by {`;
+    }
+  }
+
+  // Parse procedures
+  function parseProcedures(lines) {
     const procs = {};
     let i = 0;
     while (i < lines.length) {
       const t = lines[i].s;
-      if(/^PROCEDURE\b/i.test(t)){
+      if (/^PROCEDURE\b/i.test(t)) {
         const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
-        if(!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx+1}`;
+        if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}`;
         const name = m[1];
-        const params = m[2].trim() ? m[2].split(",").map(s=>s.trim()) : [];
-        
+        const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
+
         i++;
         if (i >= lines.length || lines[i].s !== "{") {
-          throw `PROCEDURE ${name} at line ${lines[i-1].idx+1} must be followed by {`;
+          throw `PROCEDURE ${name} at line ${lines[i - 1].idx + 1} must be followed by {`;
         }
-        
+
         const bodyStart = i + 1;
         let depth = 1;
         i++;
@@ -305,9 +1230,9 @@ window.addEventListener("DOMContentLoaded", () => {
           else if (lines[i].s === "}") depth--;
           i++;
         }
-        
+
         if (depth !== 0) throw `Unclosed PROCEDURE ${name}`;
-        
+
         const bodyEnd = i - 1;
         procs[name] = { name, params, start: bodyStart, end: bodyEnd };
       } else {
@@ -317,104 +1242,102 @@ window.addEventListener("DOMContentLoaded", () => {
     return procs;
   }
 
-  let LINES=[], PROCS=null, ENV=null;
+  let LINES = [], PROCS = null, ENV = null;
 
-  function makeEval(env, procs){
-    const safe=/^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
-    
-    function rewrite(expr){
+  function makeEval(env, procs) {
+    const safe = /^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
+
+    function rewrite(expr) {
       let result = expr
-        .replace(/[""]/g,'"')
-        .replace(/≤/g,"<=").replace(/≥/g,">=").replace(/≠/g,"!=")
-        .replace(/\bAND\b/gi,"&&").replace(/\bOR\b/gi,"||").replace(/\bNOT\b/gi,"!")
-        .replace(/\bMOD\b/gi,"%")
+        .replace(/[""]/g, '"')
+        .replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=")
+        .replace(/\bAND\b/gi, "&&").replace(/\bOR\b/gi, "||").replace(/\bNOT\b/gi, "!")
+        .replace(/\bMOD\b/gi, "%")
         .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
-      
+
       result = result.replace(/([^<>!=])=([^=])/g, '$1==$2');
-      
-      // Add await before procedure calls
+
       for (const procName in procs) {
         const regex = new RegExp(`\\b${procName}\\s*\\(`, 'g');
         result = result.replace(regex, `await ${procName}(`);
       }
-      
+
       return result;
     }
 
-    async function callProc(name, args, callerEnv){
+    async function callProc(name, args, callerEnv) {
       const def = procs[name];
-      if(!def) throw `Unknown procedure '${name}'`;
+      if (!def) throw `Unknown procedure '${name}'`;
       const local = Object.create(callerEnv);
-      for(let i=0; i<def.params.length; i++) {
+      for (let i = 0; i < def.params.length; i++) {
         local[def.params[i]] = i < args.length ? args[i] : undefined;
       }
-      const result = await execRange(def.start, def.end, local, true); 
+      const result = await execRange(def.start, def.end, local, true);
       return result !== undefined && result !== null ? result : null;
     }
 
-    return async function evalExpr(expr){
+    return async function evalExpr(expr) {
       const e = rewrite(expr);
-      if(!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
+      if (!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
 
       const scope = {
-          Math,
-          RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
-          INPUT: async () => {
-            const val = await showPrompt("Input");
-            return isNaN(val) ? val : Number(val);
-          },
-          APPEND: (L,v)=>{ 
-            if(!Array.isArray(L)) throw "APPEND: first argument must be a list"; 
-            L.push(v); 
-          },
-          INSERT: (L,i,v)=>{ 
-            if(!Array.isArray(L)) throw "INSERT: first argument must be a list";
-            if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}`;
-            L.splice(i-1,0,v); 
-          },
-          REMOVE: (L,i)=>{ 
-            if(!Array.isArray(L)) throw "REMOVE: first argument must be a list";
-            if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}`;
-            L.splice(i-1,1); 
-          },
-          LENGTH: L=>{ 
-            if(L == null) throw "LENGTH: argument is null"; 
-            if(!Array.isArray(L)) throw "LENGTH: argument must be a list"; 
-            return L.length; 
-          },
-          IDX: (L,i)=>{
-            if(L == null) throw "List index: list is null";
-            if(!Array.isArray(L)) throw "List index: not a list";
-            if (i < 1 || i > L.length) throw `List index out of bounds: ${i} (length is ${L.length})`;
-            return L[i-1];
-          }
+        Math,
+        RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
+        INPUT: async () => {
+          const val = await showPrompt("Input");
+          return isNaN(val) ? val : Number(val);
+        },
+        APPEND: (L, v) => {
+          if (!Array.isArray(L)) throw "APPEND: first argument must be a list";
+          L.push(v);
+        },
+        INSERT: (L, i, v) => {
+          if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
+          if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}`;
+          L.splice(i - 1, 0, v);
+        },
+        REMOVE: (L, i) => {
+          if (!Array.isArray(L)) throw "REMOVE: first argument must be a list";
+          if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}`;
+          L.splice(i - 1, 1);
+        },
+        LENGTH: L => {
+          if (L == null) throw "LENGTH: argument is null";
+          if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
+          return L.length;
+        },
+        IDX: (L, i) => {
+          if (L == null) throw "List index: list is null";
+          if (!Array.isArray(L)) throw "List index: not a list";
+          if (i < 1 || i > L.length) throw `List index out of bounds: ${i} (length is ${L.length})`;
+          return L[i - 1];
+        }
       };
-      
+
       let currentEnv = env;
       while (currentEnv) {
         for (const key of Object.getOwnPropertyNames(currentEnv)) {
-            if (!scope.hasOwnProperty(key)) {
-                scope[key] = currentEnv[key];
-            }
+          if (!scope.hasOwnProperty(key)) {
+            scope[key] = currentEnv[key];
+          }
         }
         const proto = Object.getPrototypeOf(currentEnv);
         if (!proto || proto === Object.prototype) break;
         currentEnv = proto;
       }
-      
+
       for (const name in procs) {
-          if (!scope.hasOwnProperty(name)) {
-            scope[name] = async (...args) => {
-              const result = await callProc(name, args, env);
-              return result;
-            };
-          }
+        if (!scope.hasOwnProperty(name)) {
+          scope[name] = async (...args) => {
+            const result = await callProc(name, args, env);
+            return result;
+          };
+        }
       }
-      
+
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      // Create async function that uses await properly
       const asyncFn = new Function(...scopeKeys, `
         return (async function() {
           return (${e});
@@ -424,20 +1347,20 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  async function execRange(start, end, env, insideProc=false){
+  async function execRange(start, end, env, insideProc = false) {
     const evalExpr = makeEval(env, PROCS);
     let i = start;
 
-    while(i < end){ 
-      if(halted) return null;
-      const {s, idx} = LINES[i];
-      
-      if(!s || s === "{" || s === "}") {
+    while (i < end) {
+      if (halted) return null;
+      const { s, idx } = LINES[i];
+
+      if (!s || s === "{" || s === "}") {
         i++;
         continue;
       }
 
-      if(!insideProc && /^PROCEDURE\b/i.test(s)){
+      if (!insideProc && /^PROCEDURE\b/i.test(s)) {
         const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
         const name = m[1];
         const def = PROCS[name];
@@ -445,76 +1368,76 @@ window.addEventListener("DOMContentLoaded", () => {
         continue;
       }
 
-      if(/^RETURN\b/i.test(s)){
-        if(!insideProc) throw `RETURN outside procedure at line ${idx+1}`;
+      if (/^RETURN\b/i.test(s)) {
+        if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}`;
         const m = s.match(/^RETURN\s*\((.*)\)/i);
         if (!m) return null;
         const returnVal = m[1].trim() ? await evalExpr(m[1]) : null;
         return returnVal;
       }
-      
-      if(/^DISPLAY\s*\(/i.test(s)){
+
+      if (/^DISPLAY\s*\(/i.test(s)) {
         const m = s.match(/^DISPLAY\s*\((.*)\)/i);
         const val = await evalExpr(m[1]);
         log(val);
         i++;
         continue;
       }
-      
-      if(/^[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)){
+
+      if (/^[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)) {
         const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
         const varName = m[1];
         const expr = m[2];
         const val = await evalExpr(expr);
-        
+
         let targetEnv = env;
         let found = false;
-        while(targetEnv) {
-            if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-                targetEnv[varName] = val;
-                found = true;
-                break;
-            }
-            const proto = Object.getPrototypeOf(targetEnv);
-            if (!proto || proto === Object.prototype) break;
-            targetEnv = proto;
+        while (targetEnv) {
+          if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
+            targetEnv[varName] = val;
+            found = true;
+            break;
+          }
+          const proto = Object.getPrototypeOf(targetEnv);
+          if (!proto || proto === Object.prototype) break;
+          targetEnv = proto;
         }
-        
+
         if (!found) {
-            env[varName] = val;
+          env[varName] = val;
         }
-        
+
         i++;
         continue;
       }
 
-      if(/^[A-Za-z_]\w*\s*\[\s*.*\s*\]\s*(←|<-)\s*(.*)$/.test(s)){
+      if (/^[A-Za-z_]\w*\s*\[\s*.*\s*\]\s*(←|<-)\s*(.*)$/.test(s)) {
         const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
         const listName = m[1];
         const indexExpr = m[2];
         const valueExpr = m[3];
-        
+
         const list = await evalExpr(listName);
         const index = await evalExpr(indexExpr);
         const value = await evalExpr(valueExpr);
-        
-        if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx+1}`;
-        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx+1}`;
-        
+
+        if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx + 1}`;
+        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx + 1}`;
+
         list[index - 1] = value;
         i++;
         continue;
       }
-      
-      if(/^IF\s*\(/i.test(s)){
+
+      if (/^IF\s*\(/i.test(s)) {
         const m = s.match(/^IF\s*\((.*)\)/i);
         const cond = await evalExpr(m[1]);
-        
+
         i++;
         if (i >= end || LINES[i].s !== "{") {
-          throw `IF at line ${idx+1} must be followed by {`;
+          throw `IF at line ${idx + 1} must be followed by {`;
         }
-        
+
         const blockStart = i + 1;
         let depth = 1;
         i++;
@@ -524,13 +1447,13 @@ window.addEventListener("DOMContentLoaded", () => {
           i++;
         }
         const blockEnd = i - 1;
-        
+
         if (cond) {
           const result = await execRange(blockStart, blockEnd, env, insideProc);
           if (insideProc && result !== undefined && result !== null) {
             return result;
           }
-          
+
           if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
             i++;
             if (i < end && LINES[i].s === "{") {
@@ -547,9 +1470,9 @@ window.addEventListener("DOMContentLoaded", () => {
           if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
             i++;
             if (i >= end || LINES[i].s !== "{") {
-              throw `ELSE at line ${LINES[i-1].idx+1} must be followed by {`;
+              throw `ELSE at line ${LINES[i - 1].idx + 1} must be followed by {`;
             }
-            
+
             const elseStart = i + 1;
             depth = 1;
             i++;
@@ -559,7 +1482,7 @@ window.addEventListener("DOMContentLoaded", () => {
               i++;
             }
             const elseEnd = i - 1;
-            
+
             const result = await execRange(elseStart, elseEnd, env, insideProc);
             if (insideProc && result !== undefined && result !== null) {
               return result;
@@ -568,17 +1491,23 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         continue;
       }
-      
-      if(/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)){
-        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
-        const countExpr = m[1];
-        const n = await evalExpr(countExpr);
-        
+
+      // FOR i ← start TO end loop
+      if (/^FOR\s+([A-Za-z_]\w*)\s*(←|<-)\s*(.+?)\s+TO\s+(.+)/i.test(s)) {
+        const m = s.match(/^FOR\s+([A-Za-z_]\w*)\s*(?:←|<-)\s*(.+?)\s+TO\s+(.+)/i);
+        if (!m) throw `Invalid FOR loop syntax at line ${idx + 1}`;
+        const iterVar = m[1];
+        const startExpr = m[2];
+        const endExpr = m[3];
+
+        const startVal = await evalExpr(startExpr);
+        const endVal = await evalExpr(endExpr);
+
         i++;
         if (i >= end || LINES[i].s !== "{") {
-          throw `REPEAT TIMES at line ${idx+1} must be followed by {`;
+          throw `FOR loop at line ${idx + 1} must be followed by {`;
         }
-        
+
         const blockStart = i + 1;
         let depth = 1;
         i++;
@@ -588,7 +1517,38 @@ window.addEventListener("DOMContentLoaded", () => {
           i++;
         }
         const blockEnd = i - 1;
-        
+
+        for (let iter = startVal; iter <= endVal; iter++) {
+          if (halted) return null;
+          env[iterVar] = iter;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+        }
+
+        delete env[iterVar];
+        continue;
+      }
+
+      if (/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)) {
+        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
+        const countExpr = m[1];
+        const n = await evalExpr(countExpr);
+
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `REPEAT TIMES at line ${idx + 1} must be followed by {`;
+        }
+
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+
         for (let rep = 0; rep < n; rep++) {
           if (halted) return null;
           const result = await execRange(blockStart, blockEnd, env, insideProc);
@@ -596,16 +1556,16 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         continue;
       }
-      
-      if(/^REPEAT\s+UNTIL\s*\(/i.test(s)){
+
+      if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
         const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
         const condExpr = m[1];
-        
+
         i++;
         if (i >= end || LINES[i].s !== "{") {
-          throw `REPEAT UNTIL at line ${idx+1} must be followed by {`;
+          throw `REPEAT UNTIL at line ${idx + 1} must be followed by {`;
         }
-        
+
         const blockStart = i + 1;
         let depth = 1;
         i++;
@@ -615,32 +1575,32 @@ window.addEventListener("DOMContentLoaded", () => {
           i++;
         }
         const blockEnd = i - 1;
-        
+
         while (true) {
           if (halted) return null;
           const result = await execRange(blockStart, blockEnd, env, insideProc);
           if (result !== undefined && result !== null && insideProc) return result;
-          
+
           const cond = await evalExpr(condExpr);
           if (cond) break;
         }
         continue;
       }
-      
-      if(/^FOR\s+EACH\s+/i.test(s)){
+
+      if (/^FOR\s+EACH\s+/i.test(s)) {
         const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
-        if (!m) throw `Invalid FOR EACH syntax at line ${idx+1}`;
+        if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}`;
         const itemVar = m[1];
         const listExpr = m[2];
-        
+
         const list = await evalExpr(listExpr);
-        if (!Array.isArray(list)) throw `FOR EACH at line ${idx+1}: ${listExpr} is not a list`;
-        
+        if (!Array.isArray(list)) throw `FOR EACH at line ${idx + 1}: ${listExpr} is not a list`;
+
         i++;
         if (i >= end || LINES[i].s !== "{") {
-          throw `FOR EACH at line ${idx+1} must be followed by {`;
+          throw `FOR EACH at line ${idx + 1} must be followed by {`;
         }
-        
+
         const blockStart = i + 1;
         let depth = 1;
         i++;
@@ -650,250 +1610,133 @@ window.addEventListener("DOMContentLoaded", () => {
           i++;
         }
         const blockEnd = i - 1;
-        
+
         for (const item of list) {
           if (halted) return null;
           env[itemVar] = item;
           const result = await execRange(blockStart, blockEnd, env, insideProc);
           if (result !== undefined && result !== null && insideProc) return result;
         }
-        
+
         delete env[itemVar];
         continue;
       }
 
-      if(/^(APPEND|INSERT|REMOVE)\s*\(/i.test(s)) {
-        await evalExpr(s); 
+      if (/^(APPEND|INSERT|REMOVE)\s*\(/i.test(s)) {
+        await evalExpr(s);
         i++;
         continue;
       }
-      
-      if(/^[A-Za-z_]\w*\s*\(/i.test(s)){
+
+      if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
         const m = s.match(/^([A-Za-z_]\w*)/);
-        if(m && PROCS[m[1]]){
+        if (m && PROCS[m[1]]) {
           await evalExpr(s);
           i++;
           continue;
         }
       }
 
-      throw `Unknown statement at line ${idx+1}: "${s}"`;
+      throw `Unknown statement at line ${idx + 1}: "${s}"`;
     }
     return null;
   }
 
-  async function run(src){
-    halted=false; logEl.innerHTML=""; setStatus("Parsing…");
-    try{
+  async function run(src) {
+    halted = false;
+    logEl.innerHTML = "";
+    setStatus("Parsing…", "running");
+    
+    try {
       LINES = preprocess(src);
+      validateBraces(LINES);
       PROCS = parseProcedures(LINES);
       ENV = Object.create(null);
-    }catch(e){ err("Parse Error: " + e); setStatus("Parse Error"); return; }
+    } catch (e) {
+      err("Parse Error: " + e);
+      detectAndShowHelp(String(e), "");
+      setStatus("Parse Error", "error");
+      return;
+    }
 
-    setStatus("Running…");
-    try{
+    setStatus("Running…", "running");
+    try {
       await execRange(0, LINES.length, ENV, false);
       setStatus("Finished");
-    }catch(e){ 
-      err("Runtime Error: " + e); 
-      setStatus("Error"); 
+      sys("✓ Program completed successfully");
+    } catch (e) {
+      err("Runtime Error: " + e);
+      const lineMatch = String(e).match(/line\s*(\d+)/i);
+      const lineNum = lineMatch ? parseInt(lineMatch[1]) - 1 : -1;
+      const lineContent = lineNum >= 0 && LINES[lineNum] ? LINES[lineNum].s : "";
+      detectAndShowHelp(String(e), lineContent);
+      setStatus("Error", "error");
     }
   }
 
-  $("#runBtn").onclick = ()=> run(editor.value);
-  $("#stopBtn").onclick = ()=> { halted=true; if(inputReject){inputReject(new Error("Stopped"));hidePrompt();} setStatus("Stopped"); };
-  
-  $("#copyBtn").onclick = async ()=> {
+  $("#runBtn").onclick = () => run(editor.value);
+  $("#stopBtn").onclick = () => {
+    halted = true;
+    if (inputReject) {
+      inputReject(new Error("Stopped"));
+      hidePrompt();
+    }
+    setStatus("Stopped", "error");
+  };
+
+  $("#copyBtn").onclick = async () => {
     try {
       await navigator.clipboard.writeText(editor.value);
-      const modal = $("#copyModal");
-      modal.classList.add("show");
-      setTimeout(() => modal.classList.remove("show"), 2000);
-    } catch (err) {
+      showToast("Code copied to clipboard!");
+    } catch (e) {
       err("Failed to copy code");
     }
   };
-  
-  $("#apmlBtn").onclick = ()=> {
+
+  $("#apmlBtn").onclick = () => {
     window.open("https://bakerfranke.github.io/apml/", "_blank");
   };
-  
-  document.addEventListener("keydown", e=>{
-    if((e.ctrlKey||e.metaKey) && e.key==="Enter"){ e.preventDefault(); $("#runBtn").click(); }
+
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      $("#runBtn").click();
+    }
   });
 
-  const samples = {
-"Hello World":
-`DISPLAY("Hello, World!")`,
+  // Help modal
+  $("#helpBtn").onclick = () => helpModal.classList.add("show");
+  $("#closeHelp").onclick = () => helpModal.classList.remove("show");
+  helpModal.onclick = e => {
+    if (e.target === helpModal) helpModal.classList.remove("show");
+  };
 
-"Variables & Assignment":
-`a ← 10
+  // Samples organized by category
+  const samples = {
+    variables: {
+      label: "Variables",
+      items: {
+        "Hello World": `DISPLAY("Hello, World!")`,
+        "Variables & Assignment": `a ← 10
 b ← "Hello"
 DISPLAY(b)
 a ← a * 2
 DISPLAY(a)`,
-
-"Arithmetic & MOD":
-`x ← 17 / 5
+        "Arithmetic & MOD": `x ← 17 / 5
 DISPLAY(x)
 y ← 17 MOD 5
 DISPLAY(y)
 DISPLAY(10 + 3 * 2)`,
-
-"IF Statement":
-`age ← 20
-IF (age >= 18)
-{
-  DISPLAY("Adult")
-}`,
-
-"IF-ELSE":
-`score ← 85
-IF (score >= 90)
-{
-  DISPLAY("A grade")
-}
-ELSE
-{
-  DISPLAY("Not an A")
-}`,
-
-"Relational Operators":
-`a ← 5
-b ← 10
-IF (a < b)
-{
-  DISPLAY("a is less than b")
-}
-IF (a ≥ 5)
-{
-  DISPLAY("a is at least 5")
-}`,
-
-"Boolean AND/OR":
-`x ← 15
-IF (x > 10 AND x < 20)
-{
-  DISPLAY("x is between 10 and 20")
-}
-IF (x < 5 OR x > 10)
-{
-  DISPLAY("x is outside 5-10 range")
-}`,
-
-"NOT Operator":
-`ready ← true
-IF (NOT ready)
-{
-  DISPLAY("Not ready")
-}
-ELSE
-{
-  DISPLAY("Ready to go!")
-}`,
-
-"REPEAT n TIMES":
-`REPEAT 5 TIMES
-{
-  DISPLAY("Hello!")
-}`,
-
-"REPEAT UNTIL":
-`count ← 0
-REPEAT UNTIL (count >= 3)
-{
-  DISPLAY(count)
-  count ← count + 1
-}`,
-
-"Lists - Creation & Access":
-`myList ← [10, 20, 30, 40]
-DISPLAY(myList[1])
-DISPLAY(myList[3])
-DISPLAY(LENGTH(myList))`,
-
-"Lists - Modification":
-`nums ← [5, 10, 15]
-nums[2] ← 99
-DISPLAY(nums[2])
-APPEND(nums, 20)
-DISPLAY(LENGTH(nums))`,
-
-"INSERT & REMOVE":
-`items ← [1, 2, 3]
-INSERT(items, 2, 99)
-DISPLAY(items[2])
-REMOVE(items, 1)
-DISPLAY(items[1])`,
-
-"FOR EACH Loop":
-`numbers ← [10, 20, 30, 40]
-FOR EACH num IN numbers
-{
-  DISPLAY(num)
-}`,
-
-"Procedure - No Return":
-`PROCEDURE greet(name)
-{
-  DISPLAY("Hello, " + name + "!")
-}
-
-greet("Alice")
-greet("Bob")`,
-
-"Procedure - With Return":
-`PROCEDURE square(n)
-{
-  RETURN (n * n)
-}
-
-result ← square(7)
-DISPLAY(result)
-DISPLAY(square(10))`,
-
-"Nested Procedures":
-`PROCEDURE double(x)
-{
-  RETURN (x * 2)
-}
-
-PROCEDURE quadruple(x)
-{
-  RETURN (double(double(x)))
-}
-
-DISPLAY(quadruple(5))`,
-
-"Procedure Call in DISPLAY":
-`PROCEDURE areaCircle(r)
-{
-  pi ← 3.14159
-  RETURN (pi * (r*r))
-}
-
-PROCEDURE areaFinder(r)
-{
-  DISPLAY("your area is: " + areaCircle(r))
-}
-
-areaFinder(5)`,
-
-"INPUT Example":
-`DISPLAY("What is your name?")
+        "INPUT Example": `DISPLAY("What is your name?")
 name ← INPUT()
 DISPLAY("Hello, " + name)
 DISPLAY("Enter a number:")
 num ← INPUT()
 DISPLAY("Double: " + (num * 2))`,
-
-"RANDOM Function":
-`DISPLAY("Rolling dice...")
+        "RANDOM Function": `DISPLAY("Rolling dice...")
 roll ← RANDOM(1, 6)
 DISPLAY("You rolled: " + roll)`,
-
-"MOD Operator":
-`remainder ← 10 MOD 3
+        "MOD Operator": `remainder ← 10 MOD 3
 DISPLAY("10 MOD 3 = " + remainder)
 
 num ← 7
@@ -904,10 +1747,95 @@ IF (num MOD 2 = 0)
 ELSE
 {
   DISPLAY(num + " is odd")
+}`
+      }
+    },
+    conditionals: {
+      label: "Conditionals",
+      items: {
+        "IF Statement": `age ← 20
+IF (age >= 18)
+{
+  DISPLAY("Adult")
 }`,
-
-"RANDOM + MOD (Even/Odd Game)":
-`randomNum ← RANDOM(1, 100)
+        "IF-ELSE": `score ← 85
+IF (score >= 90)
+{
+  DISPLAY("A grade")
+}
+ELSE
+{
+  DISPLAY("Not an A")
+}`,
+        "Relational Operators": `a ← 5
+b ← 10
+IF (a < b)
+{
+  DISPLAY("a is less than b")
+}
+IF (a ≥ 5)
+{
+  DISPLAY("a is at least 5")
+}`,
+        "Boolean AND/OR": `x ← 15
+IF (x > 10 AND x < 20)
+{
+  DISPLAY("x is between 10 and 20")
+}
+IF (x < 5 OR x > 10)
+{
+  DISPLAY("x is outside 5-10 range")
+}`,
+        "NOT Operator": `ready ← true
+IF (NOT ready)
+{
+  DISPLAY("Not ready")
+}
+ELSE
+{
+  DISPLAY("Ready to go!")
+}`
+      }
+    },
+    loops: {
+      label: "Loops",
+      items: {
+        "REPEAT n TIMES": `REPEAT 5 TIMES
+{
+  DISPLAY("Hello!")
+}`,
+        "REPEAT UNTIL": `count ← 0
+REPEAT UNTIL (count >= 3)
+{
+  DISPLAY(count)
+  count ← count + 1
+}`,
+        "FOR EACH Loop": `numbers ← [10, 20, 30, 40]
+FOR EACH num IN numbers
+{
+  DISPLAY(num)
+}`,
+        "FOR i Loop": `DISPLAY("Counting from 1 to 5:")
+FOR i ← 1 TO 5
+{
+  DISPLAY(i)
+}`,
+        "FOR i with Expression": `start ← 3
+finish ← 7
+DISPLAY("Counting from " + start + " to " + finish + ":")
+FOR i ← start TO finish
+{
+  DISPLAY("i = " + i)
+}`,
+        "Nested Loops": `DISPLAY("Multiplication Table:")
+FOR i ← 1 TO 3
+{
+  FOR j ← 1 TO 3
+  {
+    DISPLAY(i + " x " + j + " = " + (i * j))
+  }
+}`,
+        "RANDOM + MOD Game": `randomNum ← RANDOM(1, 100)
 DISPLAY("Random number: " + randomNum)
 
 IF (randomNum MOD 2 = 0)
@@ -917,10 +1845,70 @@ IF (randomNum MOD 2 = 0)
 ELSE
 {
   DISPLAY("It's ODD!")
-}`,
+}`
+      }
+    },
+    procedures: {
+      label: "Procedures",
+      items: {
+        "Procedure - No Return": `PROCEDURE greet(name)
+{
+  DISPLAY("Hello, " + name + "!")
+}
 
-"Complex Example":
-`scores ← [85, 92, 78, 95, 88]
+greet("Alice")
+greet("Bob")`,
+        "Procedure - With Return": `PROCEDURE square(n)
+{
+  RETURN(n * n)
+}
+
+result ← square(7)
+DISPLAY(result)
+DISPLAY(square(10))`,
+        "Nested Procedures": `PROCEDURE double(x)
+{
+  RETURN(x * 2)
+}
+
+PROCEDURE quadruple(x)
+{
+  RETURN(double(double(x)))
+}
+
+DISPLAY(quadruple(5))`,
+        "Procedure Call in DISPLAY": `PROCEDURE areaCircle(r)
+{
+  pi ← 3.14159
+  RETURN(pi * (r * r))
+}
+
+PROCEDURE areaFinder(r)
+{
+  DISPLAY("Your area is: " + areaCircle(r))
+}
+
+areaFinder(5)`
+      }
+    },
+    other: {
+      label: "Lists & More",
+      items: {
+        "Lists - Creation & Access": `myList ← [10, 20, 30, 40]
+DISPLAY(myList[1])
+DISPLAY(myList[3])
+DISPLAY(LENGTH(myList))`,
+        "Lists - Modification": `nums ← [5, 10, 15]
+nums[2] ← 99
+DISPLAY(nums[2])
+APPEND(nums, 20)
+DISPLAY(LENGTH(nums))`,
+        "INSERT & REMOVE": `items ← [1, 2, 3]
+INSERT(items, 2, 99)
+DISPLAY(items[2])
+REMOVE(items, 1)
+DISPLAY(items[1])`,
+        "Complex Example": `scores ← [85, 92, 78, 95, 88]
 total ← 0
 
 FOR EACH score IN scores
@@ -938,19 +1926,69 @@ IF (average >= 90)
 ELSE
 {
   DISPLAY("Good job!")
-}`
+}`,
+        "Sum with FOR i": `numbers ← [10, 20, 30, 40, 50]
+sum ← 0
+
+FOR i ← 1 TO LENGTH(numbers)
+{
+  sum ← sum + numbers[i]
+}
+
+DISPLAY("Sum: " + sum)
+DISPLAY("Average: " + (sum / LENGTH(numbers)))`
+      }
+    }
   };
 
-  const sel = $("#samples");
-  sel.innerHTML = '<option value="">📋 Load Sample...</option>' +
-    Object.keys(samples).map(k=>`<option>${k}</option>`).join('');
-  sel.onchange = e=>{ const k=e.target.value; if(samples[k]) { editor.value=samples[k]; updateLineNumbers(); } e.target.value=""; };
+  // Build dropdown menu
+  const samplesMenu = $("#samplesMenu");
+  const categoryIcons = {
+    variables: "x",
+    conditionals: "?",
+    loops: "↻",
+    procedures: "ƒ",
+    other: "+"
+  };
 
+  for (const [catKey, category] of Object.entries(samples)) {
+    const catEl = document.createElement("div");
+    catEl.className = "dropdown-category";
+    catEl.textContent = category.label;
+    samplesMenu.appendChild(catEl);
+
+    for (const [name, code] of Object.entries(category.items)) {
+      const item = document.createElement("div");
+      item.className = `dropdown-item cat-${catKey}`;
+      item.innerHTML = `<span class="icon">${categoryIcons[catKey]}</span>${name}`;
+      item.onclick = () => {
+        editor.value = code;
+        updateLineNumbers();
+        samplesMenu.classList.remove("show");
+      };
+      samplesMenu.appendChild(item);
+    }
+  }
+
+  // Dropdown toggle
+  const samplesBtn = $("#samplesBtn");
+  samplesBtn.onclick = (e) => {
+    e.stopPropagation();
+    samplesMenu.classList.toggle("show");
+  };
+
+  document.addEventListener("click", () => {
+    samplesMenu.classList.remove("show");
+  });
+
+  samplesMenu.onclick = (e) => e.stopPropagation();
+
+  // Initial state
   editor.value = `DISPLAY("Welcome to AP CSP Console!")
-DISPLAY("Select a sample or write your code.")`;
+DISPLAY("Select an example or write your code.")`;
   updateLineNumbers();
 
-  // Resizer functionality
+  // Resizer
   const resizer = $("#resizer");
   const mainEl = $("main");
   let isResizing = false;
@@ -964,11 +2002,11 @@ DISPLAY("Select a sample or write your code.")`;
   document.addEventListener("mousemove", (e) => {
     if (!isResizing) return;
     const mainRect = mainEl.getBoundingClientRect();
-    const offsetX = e.clientX - mainRect.left - 20; // Account for padding
-    const percentage = (offsetX / (mainRect.width - 40)) * 100; // Account for padding and gap
+    const offsetX = e.clientX - mainRect.left;
+    const percentage = (offsetX / mainRect.width) * 100;
     if (percentage > 20 && percentage < 80) {
       mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
-      resizer.style.left = `calc(${percentage}% - 3px)`;
+      resizer.style.left = `calc(${percentage}% - 6px)`;
     }
   });
 
@@ -979,7 +2017,7 @@ DISPLAY("Select a sample or write your code.")`;
     }
   });
 
-  setStatus("Ready"); 
+  setStatus("Ready");
   sys("✓ Emulator ready. Press Run to execute.");
 });
 </script>
