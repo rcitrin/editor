@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Citrin's APCSP Console (v2.0)</title>
+<title>Citrin's APCSP Console (v2.1)</title>
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -20,20 +20,20 @@
   --text-secondary: #a0a0a0;
   --text-muted: #666666;
 
-  /* RUN BUTTON (olive green) */
   --accent: #93c83a;
   --accent-hover: #7FAD5D;
   --accent-glow: rgba(101, 136, 26, 0.25);
 
-  /* STOP BUTTON (pumpkin orange) */
   --danger: #B5514D;
   --danger-hover: #B5514D;
 
-  /* CURSOR (same pumpkin orange) */
   --editor-caret: #519BB0;
 
-  /* APCSP TEXT (brick red) */
   --gradient-1: linear-gradient(135deg, #007BA7 0%, #007BA7 100%);
+  
+  --btn-secondary-bg: #2a2a2a;
+  --btn-secondary-border: #3a3a3a;
+  --btn-secondary-hover: #383838;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -55,7 +55,6 @@ body {
   height: 100vh;
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -71,7 +70,6 @@ body {
   background: #444;
 }
 
-/* Header */
 header {
   padding: 16px 24px;
   background: var(--bg);
@@ -120,7 +118,6 @@ header {
   gap: 8px;
 }
 
-/* Main Layout */
 main {
   flex: 1;
   display: grid;
@@ -160,7 +157,6 @@ main {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* Panels */
 .panel {
   background: var(--panel-bg);
   display: flex;
@@ -196,7 +192,6 @@ main {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* Toolbar */
 .toolbar {
   padding: 12px 16px;
   background: var(--bg-elevated);
@@ -220,7 +215,6 @@ main {
   margin: 0 8px;
 }
 
-/* Buttons */
 button {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -267,15 +261,15 @@ button.danger:hover {
 }
 
 button.ghost {
-  background: transparent;
-  border-color: transparent;
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
 }
 
 button.ghost:hover {
-  background: var(--panel-bg-hover);
+  background: var(--btn-secondary-hover);
+  border-color: #4a4a4a;
 }
 
-/* Dropdown Menu System */
 .dropdown {
   position: relative;
 }
@@ -368,9 +362,9 @@ button.ghost:hover {
 .dropdown-item.cat-conditionals .icon { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
 .dropdown-item.cat-loops .icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
 .dropdown-item.cat-procedures .icon { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
-.dropdown-item.cat-other .icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.dropdown-item.cat-lists .icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.dropdown-item.cat-programs .icon { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
 
-/* Editor */
 .editor-wrapper {
   flex: 1;
   display: flex;
@@ -382,7 +376,8 @@ button.ghost:hover {
   padding: 16px 12px;
   background: var(--editor-bg);
   color: var(--text-muted);
-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;    font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
   line-height: 1.6;
   text-align: right;
   user-select: none;
@@ -411,7 +406,6 @@ textarea::placeholder {
   color: var(--text-muted);
 }
 
-/* Console */
 .console {
   flex: 1;
   overflow: auto;
@@ -451,7 +445,6 @@ textarea::placeholder {
   white-space: pre;
 }
 
-/* Prompt */
 .prompt-wrap {
   display: none;
   padding: 12px 16px;
@@ -484,7 +477,6 @@ textarea::placeholder {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-/* Status Bar */
 .status {
   padding: 8px 16px;
   background: var(--bg);
@@ -518,7 +510,6 @@ textarea::placeholder {
   50% { opacity: 0.5; }
 }
 
-/* Footer */
 footer {
   padding: 12px 24px;
   background: var(--bg);
@@ -534,7 +525,6 @@ footer a {
   text-decoration: none;
 }
 
-/* Toast */
 .toast {
   position: fixed;
   bottom: 80px;
@@ -557,7 +547,6 @@ footer a {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Keyboard Hint */
 .kbd-hint {
   margin-left: auto;
   font-size: 11px;
@@ -576,7 +565,6 @@ kbd {
   font-size: 10px;
 }
 
-/* Help Modal */
 .help-modal {
   position: fixed;
   top: 0;
@@ -651,7 +639,6 @@ kbd {
   border: 1px solid var(--border);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   main {
     grid-template-columns: 1fr;
@@ -686,7 +673,7 @@ kbd {
 <header>
   <div class="logo">
     <div class="logo-icon">C</div>
-    <div class="logo-text">Citrin's <span>APCSP</span> Console (v2.0)</div>
+    <div class="logo-text">Citrin's <span>APCSP</span> Console (v2.1)</div>
   </div>
   <div class="header-actions">
     <button class="ghost" id="helpBtn" title="Syntax Reference">
@@ -747,7 +734,7 @@ kbd {
       <div class="toolbar-divider"></div>
       
       <div class="dropdown">
-        <button class="dropdown-trigger" id="samplesBtn">
+        <button class="dropdown-trigger ghost" id="samplesBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -794,92 +781,89 @@ kbd {
 <div class="help-modal" id="helpModal">
   <div class="help-content">
     <div class="help-header">
-      <h3>📖 Syntax Reference</h3>
+      <h3>📖 APCSP Syntax Reference</h3>
       <button class="ghost" id="closeHelp">✕</button>
     </div>
     <div class="help-body">
       <div class="help-section">
-        <h4>Variables</h4>
-        <pre>variableName ← value
-variableName ← expression</pre>
+        <h4>Assignment, Display, and Input</h4>
+        <pre>a ← expression
+DISPLAY(expression)
+INPUT()</pre>
       </div>
       <div class="help-section">
-        <h4>Display Output</h4>
-        <pre>DISPLAY(expression)
-DISPLAY("Hello " + name)</pre>
+        <h4>Arithmetic Operators</h4>
+        <pre>a + b    a - b    a * b    a / b
+a MOD b</pre>
       </div>
       <div class="help-section">
-        <h4>User Input</h4>
-        <pre>variable ← INPUT()</pre>
+        <h4>Relational and Boolean Operators</h4>
+        <pre>a = b    a ≠ b    a > b    a < b    a ≥ b    a ≤ b
+NOT condition
+condition1 AND condition2
+condition1 OR condition2</pre>
       </div>
       <div class="help-section">
-        <h4>Conditionals</h4>
-        <pre>IF (condition)
+        <h4>Selection</h4>
+        <pre>IF(condition)
 {
-  // statements
+   &lt;block of statements&gt;
 }
 
-IF (condition)
+IF(condition)
 {
-  // statements
+   &lt;first block of statements&gt;
 }
 ELSE
 {
-  // statements
+   &lt;second block of statements&gt;
 }</pre>
       </div>
       <div class="help-section">
-        <h4>Loops</h4>
+        <h4>Iteration</h4>
         <pre>REPEAT n TIMES
 {
-  // statements
+   &lt;block of statements&gt;
 }
 
-REPEAT UNTIL (condition)
+REPEAT UNTIL(condition)
 {
-  // statements
-}
-
-FOR EACH item IN list
-{
-  // statements
-}
-
-FOR i ← start TO end
-{
-  // use i as counter
+   &lt;block of statements&gt;
 }</pre>
       </div>
       <div class="help-section">
-        <h4>Lists</h4>
-        <pre>myList ← [1, 2, 3]
-myList[1]  // first element (1-indexed)
-LENGTH(myList)
-APPEND(myList, value)
-INSERT(myList, index, value)
-REMOVE(myList, index)</pre>
+        <h4>List Operations</h4>
+        <pre>aList ← [value1, value2, value3]
+aList[i]
+x ← aList[i]
+aList[i] ← x
+INSERT(aList, i, value)
+APPEND(aList, value)
+REMOVE(aList, i)
+LENGTH(aList)
+
+FOR EACH item IN aList
+{
+   &lt;block of statements&gt;
+}</pre>
       </div>
       <div class="help-section">
         <h4>Procedures</h4>
-        <pre>PROCEDURE name(param1, param2)
+        <pre>PROCEDURE procName(parameter1, parameter2, ...)
 {
-  // statements
-  RETURN(value)  // optional
+   &lt;block of statements&gt;
 }
 
-name(arg1, arg2)  // call procedure</pre>
-      </div>
-      <div class="help-section">
-        <h4>Operators</h4>
-        <pre>Arithmetic: +  -  *  /  MOD
-Comparison: =  ≠  <  >  ≤  ≥
-            (or: !=  <=  >=)
-Logical: AND  OR  NOT</pre>
+PROCEDURE procName(parameter1, parameter2, ...)
+{
+   &lt;block of statements&gt;
+   RETURN(expression)
+}</pre>
       </div>
       <div class="help-section">
         <h4>Built-in Functions</h4>
-        <pre>RANDOM(a, b)  // random integer from a to b
-LENGTH(list)  // length of list</pre>
+        <pre>RANDOM(a, b)
+LENGTH(aList)</pre>
       </div>
     </div>
   </div>
@@ -899,14 +883,12 @@ window.addEventListener("DOMContentLoaded", () => {
   
   let halted = false, inputResolve = null, inputReject = null;
 
-  // Toast notification
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add("show");
     setTimeout(() => toast.classList.remove("show"), 2000);
   }
 
-  // Line numbers
   function updateLineNumbers() {
     const lines = editor.value.split('\n').length;
     lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
@@ -917,14 +899,27 @@ window.addEventListener("DOMContentLoaded", () => {
     lineNumbers.scrollTop = editor.scrollTop;
   });
 
-  // Console output
+  function formatValue(val) {
+    if (val === null || val === undefined) {
+      return "undefined";
+    }
+    if (Array.isArray(val)) {
+      return "[" + val.map(v => {
+        if (typeof v === "string") return '"' + v + '"';
+        if (Array.isArray(v)) return formatValue(v);
+        return String(v);
+      }).join(", ") + "]";
+    }
+    return String(val);
+  }
+
   const out = (m, c = "log") => {
     const d = document.createElement("div");
     d.className = "line " + c;
-    if (typeof m === 'object') {
+    if (typeof m === 'object' && m !== null && m.html) {
       d.innerHTML = m.html;
     } else {
-      d.textContent = String(m);
+      d.textContent = formatValue(m);
     }
     logEl.appendChild(d);
     logEl.scrollTop = logEl.scrollHeight;
@@ -946,118 +941,171 @@ window.addEventListener("DOMContentLoaded", () => {
     if (state === "error") statusDot.classList.add("error");
   };
 
-  // Help system for syntax errors
   const syntaxHelp = {
     procedure: {
       title: "PROCEDURE Syntax Error",
       desc: "Procedures must follow this exact format:",
-      example: `PROCEDURE myFunction(param1, param2)
+      example: `PROCEDURE procName(parameter1, parameter2)
 {
-  // your code here
-  RETURN(value)  // optional
+   <block of statements>
+   RETURN(expression)
 }`
     },
     if: {
       title: "IF Statement Syntax Error",
       desc: "IF statements require parentheses around the condition:",
-      example: `IF (condition)
+      example: `IF(condition)
 {
-  // statements
+   <block of statements>
 }
 ELSE
 {
-  // statements
+   <block of statements>
+}`
+    },
+    nestedIf: {
+      title: "Nested IF Syntax",
+      desc: "You can nest IF statements inside each other:",
+      example: `IF(condition1)
+{
+   IF(condition2)
+   {
+      <statements>
+   }
 }`
     },
     repeatTimes: {
       title: "REPEAT TIMES Syntax Error",
       desc: "The REPEAT n TIMES loop format:",
-      example: `REPEAT 5 TIMES
+      example: `REPEAT n TIMES
 {
-  // statements
+   <block of statements>
 }`
     },
     repeatUntil: {
       title: "REPEAT UNTIL Syntax Error",
       desc: "The REPEAT UNTIL loop format:",
-      example: `REPEAT UNTIL (condition)
+      example: `REPEAT UNTIL(condition)
 {
-  // statements
+   <block of statements>
 }`
     },
     forEach: {
       title: "FOR EACH Syntax Error",
-      desc: "The FOR EACH loop format:",
-      example: `FOR EACH item IN myList
+      desc: "The FOR EACH loop format (APCSP compliant):",
+      example: `FOR EACH item IN aList
 {
-  DISPLAY(item)
-}`
-    },
-    forLoop: {
-      title: "FOR Loop Syntax Error",
-      desc: "The FOR i loop format:",
-      example: `FOR i ← 1 TO 10
-{
-  DISPLAY(i)
+   DISPLAY(item)
 }`
     },
     assignment: {
       title: "Assignment Syntax Error",
-      desc: "Use the arrow operator for assignment:",
+      desc: "Use the arrow operator ← for assignment:",
       example: `variable ← value
 variable ← expression
-myList[1] ← newValue`
+aList[i] ← value`
     },
     display: {
       title: "DISPLAY Syntax Error",
       desc: "DISPLAY requires parentheses:",
-      example: `DISPLAY("Hello World")
-DISPLAY(variable)
-DISPLAY("Result: " + value)`
+      example: `DISPLAY(expression)
+DISPLAY("Hello World")
+DISPLAY(variable)`
     },
     list: {
       title: "List Syntax Error",
       desc: "Lists use 1-based indexing:",
-      example: `myList ← [10, 20, 30]
-DISPLAY(myList[1])  // outputs 10
-APPEND(myList, 40)
-INSERT(myList, 2, 15)
-REMOVE(myList, 1)`
+      example: `aList ← [value1, value2, value3]
+aList[1]
+aList[i] ← value
+LENGTH(aList)
+APPEND(aList, value)
+INSERT(aList, i, value)
+REMOVE(aList, i)`
     },
     return: {
       title: "RETURN Syntax Error",
       desc: "RETURN must be inside a procedure:",
-      example: `PROCEDURE square(n)
+      example: `PROCEDURE procName(param)
 {
-  RETURN(n * n)
+   RETURN(expression)
 }`
     },
     block: {
       title: "Block Syntax Error",
-      desc: "Code blocks must use curly braces on their own lines:",
-      example: `IF (condition)
+      desc: "Code blocks must use curly braces:",
+      example: `IF(condition)
 {
-  // code here
-}
-
-// Make sure every { has a matching }
-// and they are properly nested`
+   <statements here>
+}`
     },
     brace: {
       title: "Brace Mismatch Error",
       desc: "Every opening { must have a matching closing }:",
       example: `PROCEDURE example()
 {
-  IF (condition)
-  {
-    // nested code
-  }
-}
-
-// Check that:
-// 1. Every { has a matching }
-// 2. Braces are properly nested
-// 3. No extra or missing braces`
+   IF(condition)
+   {
+      <nested code>
+   }
+}`
+    },
+    boolean: {
+      title: "Boolean Expression Error",
+      desc: "Boolean expressions evaluate to true or false:",
+      example: `a = b
+a ≠ b
+a > b    a < b    a ≥ b    a ≤ b
+NOT condition
+cond1 AND cond2
+cond1 OR cond2`
+    },
+    random: {
+      title: "RANDOM Syntax Error",
+      desc: "RANDOM generates a random integer from a to b inclusive:",
+      example: `RANDOM(1, 10)`
+    },
+    mod: {
+      title: "MOD Operator Error",
+      desc: "MOD returns the remainder of division:",
+      example: `17 MOD 5
+x MOD 2 = 0`
+    },
+    input: {
+      title: "INPUT Syntax Error",
+      desc: "INPUT accepts a value from the user:",
+      example: `name ← INPUT()
+DISPLAY("Hello " + name)`
+    },
+    undefined: {
+      title: "Undefined Variable Error",
+      desc: "Make sure variables are assigned before use:",
+      example: `x ← 10
+DISPLAY(x)`
+    },
+    length: {
+      title: "LENGTH Syntax Error",
+      desc: "LENGTH returns the number of elements in a list:",
+      example: `aList ← [1, 2, 3]
+len ← LENGTH(aList)`
+    },
+    append: {
+      title: "APPEND Syntax Error",
+      desc: "APPEND adds a value to the end of a list:",
+      example: `aList ← [1, 2]
+APPEND(aList, 3)`
+    },
+    insert: {
+      title: "INSERT Syntax Error",
+      desc: "INSERT adds a value at a specific index:",
+      example: `aList ← [1, 3]
+INSERT(aList, 2, 2)`
+    },
+    remove: {
+      title: "REMOVE Syntax Error",
+      desc: "REMOVE removes a value at a specific index:",
+      example: `aList ← [1, 2, 3]
+REMOVE(aList, 2)`
     }
   };
 
@@ -1072,10 +1120,14 @@ REMOVE(myList, 1)`
     const lowerErr = errorMsg.toLowerCase();
     const lowerLine = line ? line.toLowerCase() : "";
     
-    if (lowerErr.includes("unclosed") || lowerErr.includes("missing closing") || lowerErr.includes("unexpected }") || lowerErr.includes("unexpected {") || lowerErr.includes("no matching")) {
+    if (lowerErr.includes("undefined") || lowerErr.includes("is not defined")) {
+      showSyntaxHelp("undefined");
+    } else if (lowerErr.includes("unclosed") || lowerErr.includes("missing closing") || lowerErr.includes("unexpected }") || lowerErr.includes("unexpected {") || lowerErr.includes("no matching")) {
       showSyntaxHelp("brace");
     } else if (lowerErr.includes("procedure") || lowerLine.startsWith("procedure")) {
       showSyntaxHelp("procedure");
+    } else if (lowerErr.includes("nested") && lowerErr.includes("if")) {
+      showSyntaxHelp("nestedIf");
     } else if (lowerErr.includes("if") || lowerLine.startsWith("if")) {
       showSyntaxHelp("if");
     } else if (lowerErr.includes("repeat") && lowerErr.includes("times")) {
@@ -1084,14 +1136,28 @@ REMOVE(myList, 1)`
       showSyntaxHelp("repeatUntil");
     } else if (lowerErr.includes("for each") || lowerLine.startsWith("for each")) {
       showSyntaxHelp("forEach");
-    } else if (lowerErr.includes("for ") || lowerLine.match(/^for\s+\w+\s*(←|<-)/i)) {
-      showSyntaxHelp("forLoop");
     } else if (lowerErr.includes("return")) {
       showSyntaxHelp("return");
     } else if (lowerErr.includes("display")) {
       showSyntaxHelp("display");
-    } else if (lowerErr.includes("list") || lowerErr.includes("index") || lowerErr.includes("append") || lowerErr.includes("insert") || lowerErr.includes("remove")) {
+    } else if (lowerErr.includes("random")) {
+      showSyntaxHelp("random");
+    } else if (lowerErr.includes("mod")) {
+      showSyntaxHelp("mod");
+    } else if (lowerErr.includes("input")) {
+      showSyntaxHelp("input");
+    } else if (lowerErr.includes("length")) {
+      showSyntaxHelp("length");
+    } else if (lowerErr.includes("append")) {
+      showSyntaxHelp("append");
+    } else if (lowerErr.includes("insert")) {
+      showSyntaxHelp("insert");
+    } else if (lowerErr.includes("remove")) {
+      showSyntaxHelp("remove");
+    } else if (lowerErr.includes("list") || lowerErr.includes("index")) {
       showSyntaxHelp("list");
+    } else if (lowerErr.includes("boolean") || lowerErr.includes("and") || lowerErr.includes("or") || lowerErr.includes("not")) {
+      showSyntaxHelp("boolean");
     } else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) {
       showSyntaxHelp("assignment");
     } else if (lowerErr.includes("{") || lowerErr.includes("}") || lowerErr.includes("block") || lowerErr.includes("followed by")) {
@@ -1099,7 +1165,6 @@ REMOVE(myList, 1)`
     }
   }
 
-  // Input prompt
   function showPrompt(label) {
     promptInput.value = "";
     promptInput.placeholder = label || "Input";
@@ -1133,7 +1198,6 @@ REMOVE(myList, 1)`
     if (e.key === "Escape") promptCancel.click();
   });
 
-  // Preprocessor
   function preprocess(src) {
     return src.split(/\r?\n/).map((raw, idx) => {
       const s = raw
@@ -1143,7 +1207,6 @@ REMOVE(myList, 1)`
     });
   }
 
-  // Brace validation
   function validateBraces(lines) {
     let depth = 0;
     let expectingOpen = false;
@@ -1154,7 +1217,6 @@ REMOVE(myList, 1)`
       const { s, idx } = lines[i];
       if (!s) continue;
       
-      // Check if this line is a construct that requires a following {
       if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(s) && !s.includes("{")) {
         if (expectingOpen) {
           throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
@@ -1167,7 +1229,6 @@ REMOVE(myList, 1)`
       
       if (s === "{") {
         if (!expectingOpen && depth === 0) {
-          // Check if previous non-empty line was a construct
           let foundConstruct = false;
           for (let j = i - 1; j >= 0; j--) {
             if (lines[j].s) {
@@ -1205,7 +1266,6 @@ REMOVE(myList, 1)`
     }
   }
 
-  // Parse procedures
   function parseProcedures(lines) {
     const procs = {};
     let i = 0;
@@ -1213,7 +1273,7 @@ REMOVE(myList, 1)`
       const t = lines[i].s;
       if (/^PROCEDURE\b/i.test(t)) {
         const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
-        if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}`;
+        if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}. Format: PROCEDURE procName(param1, param2)`;
         const name = m[1];
         const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
 
@@ -1282,34 +1342,40 @@ REMOVE(myList, 1)`
 
       const scope = {
         Math,
-        RANDOM: (a, b) => Math.floor(Math.random() * (b - a + 1)) + a,
+        RANDOM: (a, b) => {
+          if (a === undefined || b === undefined) throw "RANDOM requires two arguments: RANDOM(a, b)";
+          return Math.floor(Math.random() * (b - a + 1)) + a;
+        },
         INPUT: async () => {
           const val = await showPrompt("Input");
-          return isNaN(val) ? val : Number(val);
+          return isNaN(val) || val === "" ? val : Number(val);
         },
         APPEND: (L, v) => {
           if (!Array.isArray(L)) throw "APPEND: first argument must be a list";
+          if (v === undefined) throw "APPEND requires two arguments: APPEND(aList, value)";
           L.push(v);
         },
         INSERT: (L, i, v) => {
           if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
-          if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}`;
+          if (i === undefined || v === undefined) throw "INSERT requires three arguments: INSERT(aList, i, value)";
+          if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}. Must be between 1 and ${L.length + 1}`;
           L.splice(i - 1, 0, v);
         },
         REMOVE: (L, i) => {
           if (!Array.isArray(L)) throw "REMOVE: first argument must be a list";
-          if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}`;
+          if (i === undefined) throw "REMOVE requires two arguments: REMOVE(aList, i)";
+          if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}. List length is ${L.length}`;
           L.splice(i - 1, 1);
         },
         LENGTH: L => {
-          if (L == null) throw "LENGTH: argument is null";
+          if (L == null) throw "LENGTH: argument is undefined. Make sure the list exists.";
           if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
           return L.length;
         },
         IDX: (L, i) => {
-          if (L == null) throw "List index: list is null";
-          if (!Array.isArray(L)) throw "List index: not a list";
-          if (i < 1 || i > L.length) throw `List index out of bounds: ${i} (length is ${L.length})`;
+          if (L == null) throw "List access error: list is undefined. Make sure the list exists.";
+          if (!Array.isArray(L)) throw "List access error: variable is not a list";
+          if (i < 1 || i > L.length) throw `List index out of bounds: index ${i}, but list length is ${L.length}. Remember: lists are 1-indexed.`;
           return L[i - 1];
         }
       };
@@ -1338,12 +1404,22 @@ REMOVE(myList, 1)`
       const scopeKeys = Object.keys(scope);
       const scopeValues = Object.values(scope);
 
-      const asyncFn = new Function(...scopeKeys, `
-        return (async function() {
-          return (${e});
-        })();
-      `);
-      return await asyncFn(...scopeValues);
+      try {
+        const asyncFn = new Function(...scopeKeys, `
+          return (async function() {
+            return (${e});
+          })();
+        `);
+        return await asyncFn(...scopeValues);
+      } catch (err) {
+        if (err.message && err.message.includes("is not defined")) {
+          const varMatch = err.message.match(/(\w+) is not defined/);
+          if (varMatch) {
+            throw `Variable '${varMatch[1]}' is not defined. Make sure to assign it a value first with: ${varMatch[1]} ← value`;
+          }
+        }
+        throw err.message || err;
+      }
     };
   }
 
@@ -1369,15 +1445,16 @@ REMOVE(myList, 1)`
       }
 
       if (/^RETURN\b/i.test(s)) {
-        if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}`;
+        if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}. RETURN can only be used inside a PROCEDURE.`;
         const m = s.match(/^RETURN\s*\((.*)\)/i);
-        if (!m) return null;
+        if (!m) throw `Invalid RETURN syntax at line ${idx + 1}. Use: RETURN(expression)`;
         const returnVal = m[1].trim() ? await evalExpr(m[1]) : null;
         return returnVal;
       }
 
       if (/^DISPLAY\s*\(/i.test(s)) {
         const m = s.match(/^DISPLAY\s*\((.*)\)/i);
+        if (!m) throw `Invalid DISPLAY syntax at line ${idx + 1}. Use: DISPLAY(expression)`;
         const val = await evalExpr(m[1]);
         log(val);
         i++;
@@ -1388,6 +1465,7 @@ REMOVE(myList, 1)`
         const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
         const varName = m[1];
         const expr = m[2];
+        if (!expr.trim()) throw `Missing value in assignment at line ${idx + 1}. Use: ${varName} ← value`;
         const val = await evalExpr(expr);
 
         let targetEnv = env;
@@ -1422,7 +1500,7 @@ REMOVE(myList, 1)`
         const value = await evalExpr(valueExpr);
 
         if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx + 1}`;
-        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx + 1}`;
+        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx + 1}. List length is ${list.length}. Remember: lists are 1-indexed.`;
 
         list[index - 1] = value;
         i++;
@@ -1431,6 +1509,7 @@ REMOVE(myList, 1)`
 
       if (/^IF\s*\(/i.test(s)) {
         const m = s.match(/^IF\s*\((.*)\)/i);
+        if (!m) throw `Invalid IF syntax at line ${idx + 1}. Use: IF(condition)`;
         const cond = await evalExpr(m[1]);
 
         i++;
@@ -1492,47 +1571,12 @@ REMOVE(myList, 1)`
         continue;
       }
 
-      // FOR i ← start TO end loop
-      if (/^FOR\s+([A-Za-z_]\w*)\s*(←|<-)\s*(.+?)\s+TO\s+(.+)/i.test(s)) {
-        const m = s.match(/^FOR\s+([A-Za-z_]\w*)\s*(?:←|<-)\s*(.+?)\s+TO\s+(.+)/i);
-        if (!m) throw `Invalid FOR loop syntax at line ${idx + 1}`;
-        const iterVar = m[1];
-        const startExpr = m[2];
-        const endExpr = m[3];
-
-        const startVal = await evalExpr(startExpr);
-        const endVal = await evalExpr(endExpr);
-
-        i++;
-        if (i >= end || LINES[i].s !== "{") {
-          throw `FOR loop at line ${idx + 1} must be followed by {`;
-        }
-
-        const blockStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < end && depth > 0) {
-          if (LINES[i].s === "{") depth++;
-          else if (LINES[i].s === "}") depth--;
-          i++;
-        }
-        const blockEnd = i - 1;
-
-        for (let iter = startVal; iter <= endVal; iter++) {
-          if (halted) return null;
-          env[iterVar] = iter;
-          const result = await execRange(blockStart, blockEnd, env, insideProc);
-          if (result !== undefined && result !== null && insideProc) return result;
-        }
-
-        delete env[iterVar];
-        continue;
-      }
-
       if (/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)) {
         const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
         const countExpr = m[1];
         const n = await evalExpr(countExpr);
+
+        if (typeof n !== 'number' || n < 0) throw `REPEAT TIMES at line ${idx + 1}: count must be a non-negative number, got ${n}`;
 
         i++;
         if (i >= end || LINES[i].s !== "{") {
@@ -1559,6 +1603,7 @@ REMOVE(myList, 1)`
 
       if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
         const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
+        if (!m) throw `Invalid REPEAT UNTIL syntax at line ${idx + 1}. Use: REPEAT UNTIL(condition)`;
         const condExpr = m[1];
 
         i++;
@@ -1589,7 +1634,7 @@ REMOVE(myList, 1)`
 
       if (/^FOR\s+EACH\s+/i.test(s)) {
         const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
-        if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}`;
+        if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}. Use: FOR EACH item IN aList`;
         const itemVar = m[1];
         const listExpr = m[2];
 
@@ -1704,96 +1749,137 @@ REMOVE(myList, 1)`
     }
   });
 
-  // Help modal
   $("#helpBtn").onclick = () => helpModal.classList.add("show");
   $("#closeHelp").onclick = () => helpModal.classList.remove("show");
   helpModal.onclick = e => {
     if (e.target === helpModal) helpModal.classList.remove("show");
   };
 
-  // Samples organized by category
   const samples = {
     variables: {
       label: "Variables",
       items: {
-        "Hello World": `DISPLAY("Hello, World!")`,
-        "Variables & Assignment": `a ← 10
-b ← "Hello"
-DISPLAY(b)
-a ← a * 2
-DISPLAY(a)`,
-        "Arithmetic & MOD": `x ← 17 / 5
-DISPLAY(x)
-y ← 17 MOD 5
-DISPLAY(y)
-DISPLAY(10 + 3 * 2)`,
-        "INPUT Example": `DISPLAY("What is your name?")
-name ← INPUT()
-DISPLAY("Hello, " + name)
-DISPLAY("Enter a number:")
-num ← INPUT()
-DISPLAY("Double: " + (num * 2))`,
-        "RANDOM Function": `DISPLAY("Rolling dice...")
-roll ← RANDOM(1, 6)
-DISPLAY("You rolled: " + roll)`,
-        "MOD Operator": `remainder ← 10 MOD 3
-DISPLAY("10 MOD 3 = " + remainder)
+        "Variables & Types": `num ← 42
+text ← "Hello"
+flag ← true
+
+DISPLAY(num)
+DISPLAY(text)
+DISPLAY(flag)`,
+        "Displaying Variables": `name ← "Alice"
+age ← 16
+DISPLAY("Name: " + name)
+DISPLAY("Age: " + age)`,
+        "Concatenation": `firstName ← "Ada"
+lastName ← "Lovelace"
+fullName ← firstName + " " + lastName
+DISPLAY(fullName)
+
+score ← 95
+DISPLAY("Your score is: " + score)`,
+        "Swapping Values": `a ← 10
+b ← 20
+DISPLAY("Before: a = " + a + ", b = " + b)
+
+temp ← a
+a ← b
+b ← temp
+
+DISPLAY("After: a = " + a + ", b = " + b)`,
+        "Booleans & Comparisons": `x ← 8
+y ← 10
+
+DISPLAY("x = " + x + ", y = " + y)
+DISPLAY("x > y is: " + (x > y))
+DISPLAY("x < y is: " + (x < y))
+DISPLAY("x = y is: " + (x = y))
+DISPLAY("x ≠ y is: " + (x ≠ y))`,
+        "Boolean Logic": `a ← true
+b ← false
+
+DISPLAY("a AND b: " + (a AND b))
+DISPLAY("a OR b: " + (a OR b))
+DISPLAY("NOT a: " + (NOT a))`,
+        "MOD Operator": `DISPLAY("17 MOD 5 = " + (17 MOD 5))
+DISPLAY("10 MOD 3 = " + (10 MOD 3))
 
 num ← 7
-IF (num MOD 2 = 0)
+IF(num MOD 2 = 0)
 {
-  DISPLAY(num + " is even")
+   DISPLAY(num + " is even")
 }
 ELSE
 {
-  DISPLAY(num + " is odd")
+   DISPLAY(num + " is odd")
+}`,
+        "RANDOM Function": `roll ← RANDOM(1, 6)
+DISPLAY("Dice roll: " + roll)
+
+coin ← RANDOM(1, 2)
+IF(coin = 1)
+{
+   DISPLAY("Heads!")
+}
+ELSE
+{
+   DISPLAY("Tails!")
 }`
       }
     },
     conditionals: {
       label: "Conditionals",
       items: {
-        "IF Statement": `age ← 20
-IF (age >= 18)
+        "IF Statement": `age ← 18
+IF(age ≥ 18)
 {
-  DISPLAY("Adult")
+   DISPLAY("You can vote!")
 }`,
-        "IF-ELSE": `score ← 85
-IF (score >= 90)
+        "IF-ELSE": `score ← 75
+IF(score ≥ 60)
 {
-  DISPLAY("A grade")
+   DISPLAY("You passed!")
 }
 ELSE
 {
-  DISPLAY("Not an A")
+   DISPLAY("Try again.")
 }`,
-        "Relational Operators": `a ← 5
-b ← 10
-IF (a < b)
+        "Nested IF": `grade ← 85
+
+IF(grade ≥ 90)
 {
-  DISPLAY("a is less than b")
-}
-IF (a ≥ 5)
-{
-  DISPLAY("a is at least 5")
-}`,
-        "Boolean AND/OR": `x ← 15
-IF (x > 10 AND x < 20)
-{
-  DISPLAY("x is between 10 and 20")
-}
-IF (x < 5 OR x > 10)
-{
-  DISPLAY("x is outside 5-10 range")
-}`,
-        "NOT Operator": `ready ← true
-IF (NOT ready)
-{
-  DISPLAY("Not ready")
+   DISPLAY("A")
 }
 ELSE
 {
-  DISPLAY("Ready to go!")
+   IF(grade ≥ 80)
+   {
+      DISPLAY("B")
+   }
+   ELSE
+   {
+      IF(grade ≥ 70)
+      {
+         DISPLAY("C")
+      }
+      ELSE
+      {
+         DISPLAY("Below C")
+      }
+   }
+}`,
+        "Boolean Conditions": `x ← 15
+IF(x > 10 AND x < 20)
+{
+   DISPLAY("x is between 10 and 20")
+}`,
+        "NOT Operator": `isRaining ← false
+IF(NOT isRaining)
+{
+   DISPLAY("Go outside!")
+}
+ELSE
+{
+   DISPLAY("Take an umbrella")
 }`
       }
     },
@@ -1802,153 +1888,282 @@ ELSE
       items: {
         "REPEAT n TIMES": `REPEAT 5 TIMES
 {
-  DISPLAY("Hello!")
+   DISPLAY("Hello!")
 }`,
-        "REPEAT UNTIL": `count ← 0
-REPEAT UNTIL (count >= 3)
+        "REPEAT with Counter": `count ← 1
+REPEAT 5 TIMES
 {
-  DISPLAY(count)
-  count ← count + 1
+   DISPLAY("Count: " + count)
+   count ← count + 1
 }`,
-        "FOR EACH Loop": `numbers ← [10, 20, 30, 40]
+        "REPEAT UNTIL": `num ← 1
+REPEAT UNTIL(num > 5)
+{
+   DISPLAY(num)
+   num ← num + 1
+}`,
+        "FOR EACH with List": `colors ← ["red", "green", "blue"]
+FOR EACH color IN colors
+{
+   DISPLAY(color)
+}`,
+        "Sum with FOR EACH": `numbers ← [10, 20, 30, 40]
+sum ← 0
 FOR EACH num IN numbers
 {
-  DISPLAY(num)
-}`,
-        "FOR i Loop": `DISPLAY("Counting from 1 to 5:")
-FOR i ← 1 TO 5
-{
-  DISPLAY(i)
-}`,
-        "FOR i with Expression": `start ← 3
-finish ← 7
-DISPLAY("Counting from " + start + " to " + finish + ":")
-FOR i ← start TO finish
-{
-  DISPLAY("i = " + i)
-}`,
-        "Nested Loops": `DISPLAY("Multiplication Table:")
-FOR i ← 1 TO 3
-{
-  FOR j ← 1 TO 3
-  {
-    DISPLAY(i + " x " + j + " = " + (i * j))
-  }
-}`,
-        "RANDOM + MOD Game": `randomNum ← RANDOM(1, 100)
-DISPLAY("Random number: " + randomNum)
+   sum ← sum + num
+}
+DISPLAY("Sum: " + sum)`
+      }
+    },
+    lists: {
+      label: "Lists",
+      items: {
+        "Create & Access": `myList ← [10, 20, 30, 40]
+DISPLAY(myList[1])
+DISPLAY(myList[3])
+DISPLAY("Length: " + LENGTH(myList))
+DISPLAY("Full list: " + myList)`,
+        "Modify Elements": `nums ← [5, 10, 15]
+DISPLAY("Before: " + nums)
+nums[2] ← 99
+DISPLAY("After: " + nums)`,
+        "APPEND": `items ← [1, 2, 3]
+DISPLAY("Before: " + items)
+APPEND(items, 4)
+APPEND(items, 5)
+DISPLAY("After: " + items)`,
+        "INSERT": `letters ← ["A", "C", "D"]
+DISPLAY("Before: " + letters)
+INSERT(letters, 2, "B")
+DISPLAY("After: " + letters)`,
+        "REMOVE": `data ← [10, 20, 30, 40]
+DISPLAY("Before: " + data)
+REMOVE(data, 2)
+DISPLAY("After: " + data)`,
+        "Search in List": `names ← ["Alice", "Bob", "Charlie"]
+searchFor ← "Bob"
+found ← false
 
-IF (randomNum MOD 2 = 0)
+FOR EACH name IN names
 {
-  DISPLAY("It's EVEN!")
+   IF(name = searchFor)
+   {
+      found ← true
+   }
+}
+
+IF(found)
+{
+   DISPLAY(searchFor + " was found!")
 }
 ELSE
 {
-  DISPLAY("It's ODD!")
+   DISPLAY(searchFor + " was not found.")
 }`
       }
     },
     procedures: {
       label: "Procedures",
       items: {
-        "Procedure - No Return": `PROCEDURE greet(name)
+        "Simple Procedure": `PROCEDURE greet(name)
 {
-  DISPLAY("Hello, " + name + "!")
+   DISPLAY("Hello, " + name + "!")
 }
 
 greet("Alice")
 greet("Bob")`,
-        "Procedure - With Return": `PROCEDURE square(n)
+        "Procedure with Return": `PROCEDURE square(n)
 {
-  RETURN(n * n)
+   RETURN(n * n)
 }
 
-result ← square(7)
-DISPLAY(result)
-DISPLAY(square(10))`,
-        "Nested Procedures": `PROCEDURE double(x)
+result ← square(5)
+DISPLAY("5 squared is " + result)`,
+        "Multiple Parameters": `PROCEDURE add(a, b)
 {
-  RETURN(x * 2)
+   RETURN(a + b)
+}
+
+sum ← add(10, 25)
+DISPLAY("10 + 25 = " + sum)`,
+        "Procedure Calling Procedure": `PROCEDURE double(x)
+{
+   RETURN(x * 2)
 }
 
 PROCEDURE quadruple(x)
 {
-  RETURN(double(double(x)))
+   RETURN(double(double(x)))
 }
 
-DISPLAY(quadruple(5))`,
-        "Procedure Call in DISPLAY": `PROCEDURE areaCircle(r)
-{
-  pi ← 3.14159
-  RETURN(pi * (r * r))
-}
-
-PROCEDURE areaFinder(r)
-{
-  DISPLAY("Your area is: " + areaCircle(r))
-}
-
-areaFinder(5)`
+DISPLAY(quadruple(5))`
       }
     },
-    other: {
-      label: "Lists & More",
+    programs: {
+      label: "Program Samples",
       items: {
-        "Lists - Creation & Access": `myList ← [10, 20, 30, 40]
-DISPLAY(myList[1])
-DISPLAY(myList[3])
-DISPLAY(LENGTH(myList))`,
-        "Lists - Modification": `nums ← [5, 10, 15]
-nums[2] ← 99
-DISPLAY(nums[2])
-APPEND(nums, 20)
-DISPLAY(LENGTH(nums))`,
-        "INSERT & REMOVE": `items ← [1, 2, 3]
-INSERT(items, 2, 99)
-DISPLAY(items[2])
-REMOVE(items, 1)
-DISPLAY(items[1])`,
-        "Complex Example": `scores ← [85, 92, 78, 95, 88]
-total ← 0
+        "1. Variables & Booleans": `name ← "Student"
+score1 ← 85
+score2 ← 92
 
-FOR EACH score IN scores
+DISPLAY("Welcome, " + name + "!")
+DISPLAY("Score 1: " + score1)
+DISPLAY("Score 2: " + score2)
+
+average ← (score1 + score2) / 2
+DISPLAY("Average: " + average)
+
+DISPLAY("Score1 > Score2: " + (score1 > score2))
+DISPLAY("Both above 80: " + (score1 > 80 AND score2 > 80))`,
+
+        "2. Variables & IF": `DISPLAY("Enter your score:")
+score ← INPUT()
+
+IF(score ≥ 90)
 {
-  total ← total + score
-}
-
-average ← total / LENGTH(scores)
-DISPLAY("Average score: " + average)
-
-IF (average >= 90)
-{
-  DISPLAY("Excellent!")
+   grade ← "A"
 }
 ELSE
 {
-  DISPLAY("Good job!")
-}`,
-        "Sum with FOR i": `numbers ← [10, 20, 30, 40, 50]
-sum ← 0
-
-FOR i ← 1 TO LENGTH(numbers)
-{
-  sum ← sum + numbers[i]
+   IF(score ≥ 80)
+   {
+      grade ← "B"
+   }
+   ELSE
+   {
+      IF(score ≥ 70)
+      {
+         grade ← "C"
+      }
+      ELSE
+      {
+         grade ← "F"
+      }
+   }
 }
 
-DISPLAY("Sum: " + sum)
-DISPLAY("Average: " + (sum / LENGTH(numbers)))`
+DISPLAY("Grade: " + grade)`,
+
+        "3. Variables, List & IF": `scores ← [78, 92, 65, 88, 95, 71]
+DISPLAY("Scores: " + scores)
+
+max ← scores[1]
+FOR EACH score IN scores
+{
+   IF(score > max)
+   {
+      max ← score
+   }
+}
+
+DISPLAY("Highest score: " + max)
+
+IF(max ≥ 90)
+{
+   DISPLAY("Top score is an A!")
+}`,
+
+        "4. List, Loop & IF": `grades ← [85, 42, 78, 95, 55, 67, 88, 39]
+passingCount ← 0
+failingCount ← 0
+
+FOR EACH grade IN grades
+{
+   IF(grade ≥ 60)
+   {
+      passingCount ← passingCount + 1
+   }
+   ELSE
+   {
+      failingCount ← failingCount + 1
+   }
+}
+
+DISPLAY("All grades: " + grades)
+DISPLAY("Number passing: " + passingCount)
+DISPLAY("Number failing: " + failingCount)`,
+
+        "5. Procedures & Return": `PROCEDURE calculateSum(numList)
+{
+   total ← 0
+   FOR EACH num IN numList
+   {
+      total ← total + num
+   }
+   RETURN(total)
+}
+
+PROCEDURE findMax(numList)
+{
+   maxVal ← numList[1]
+   FOR EACH num IN numList
+   {
+      IF(num > maxVal)
+      {
+         maxVal ← num
+      }
+   }
+   RETURN(maxVal)
+}
+
+data ← [23, 67, 45, 89, 12, 56]
+DISPLAY("Data: " + data)
+DISPLAY("Sum: " + calculateSum(data))
+DISPLAY("Max: " + findMax(data))`,
+
+        "6. Login System (Full)": `usernames ← ["admin", "student1", "teacher"]
+passwords ← ["pass123", "learn456", "teach789"]
+
+PROCEDURE checkCredentials(inputUser, inputPass)
+{
+   index ← 1
+   FOR EACH user IN usernames
+   {
+      IF(user = inputUser)
+      {
+         IF(passwords[index] = inputPass)
+         {
+            RETURN(true)
+         }
+      }
+      index ← index + 1
+   }
+   RETURN(false)
+}
+
+PROCEDURE login(user, pass)
+{
+   isValid ← checkCredentials(user, pass)
+   IF(isValid)
+   {
+      DISPLAY("ACCESS GRANTED")
+   }
+   ELSE
+   {
+      DISPLAY("INTRUDER ALERT")
+   }
+   RETURN(isValid)
+}
+
+DISPLAY("Enter username:")
+enteredUser ← INPUT()
+DISPLAY("Enter password:")
+enteredPass ← INPUT()
+
+result ← login(enteredUser, enteredPass)`
       }
     }
   };
 
-  // Build dropdown menu
   const samplesMenu = $("#samplesMenu");
   const categoryIcons = {
     variables: "x",
     conditionals: "?",
     loops: "↻",
     procedures: "ƒ",
-    other: "+"
+    lists: "[ ]",
+    programs: "◆"
   };
 
   for (const [catKey, category] of Object.entries(samples)) {
@@ -1970,7 +2185,6 @@ DISPLAY("Average: " + (sum / LENGTH(numbers)))`
     }
   }
 
-  // Dropdown toggle
   const samplesBtn = $("#samplesBtn");
   samplesBtn.onclick = (e) => {
     e.stopPropagation();
@@ -1983,12 +2197,10 @@ DISPLAY("Average: " + (sum / LENGTH(numbers)))`
 
   samplesMenu.onclick = (e) => e.stopPropagation();
 
-  // Initial state
   editor.value = `DISPLAY("Welcome to AP CSP Console!")
-DISPLAY("Select an example or write your code.")`;
+DISPLAY("Select an example from the menu above.")`;
   updateLineNumbers();
 
-  // Resizer
   const resizer = $("#resizer");
   const mainEl = $("main");
   let isResizing = false;
