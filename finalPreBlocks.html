@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APCSP Pseudocode Console (v2.11)</title>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+
+:root {
+  --bg: #000000;
+  --bg-elevated: #0a0a0a;
+  --panel-bg: #111111;
+  --panel-bg-hover: #1a1a1a;
+  --border: #222222;
+  --border-subtle: #1a1a1a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+
+  --accent: #93c83a;
+  --accent-hover: #7FAD5D;
+  --accent-glow: rgba(101, 136, 26, 0.25);
+
+  --danger: #B5514D;
+  --danger-hover: #B5514D;
+
+  --editor-caret: #519BB0;
+
+  --gradient-1: linear-gradient(135deg, #007BA7 0%, #007BA7 100%);
+  
+  --btn-secondary-bg: #2a2a2a;
+  --btn-secondary-border: #3a3a3a;
+  --btn-secondary-hover: #383838;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { 
+  margin: 0; 
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+header {
+  padding: 16px 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: #8A3F8E;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: #000;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.logo-text span {
+  background: var(--gradient-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  min-height: 0;
+  position: relative;
+}
+
+.resizer {
+  position: absolute;
+  width: 12px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  top: 0;
+  left: calc(50% - 6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer::after {
+  content: '';
+  width: 4px;
+  height: 48px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.resizer:hover::after {
+  background: var(--accent);
+  height: 64px;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.panel {
+  background: var(--panel-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.panel-header .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.toolbar {
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 6px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+button {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+button:hover {
+  background: var(--panel-bg-hover);
+  border-color: #333;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+button.danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+button.ghost {
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+}
+
+button.ghost:hover {
+  background: var(--btn-secondary-hover);
+  border-color: #4a4a4a;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.dropdown-trigger::after {
+  content: '▾';
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dropdown-menu.show {
+  display: block;
+  animation: dropdownIn 0.15s ease;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-category {
+  padding: 8px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-category::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-item:hover {
+  background: var(--panel-bg-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-item .icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.dropdown-item.cat-variables .icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.dropdown-item.cat-conditionals .icon { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.dropdown-item.cat-loops .icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.dropdown-item.cat-procedures .icon { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+.dropdown-item.cat-lists .icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.dropdown-item.cat-programs .icon { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: var(--editor-bg);
+}
+
+.line-numbers {
+  padding: 16px 12px;
+  background: var(--editor-bg);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: right;
+  user-select: none;
+  border-right: 1px solid var(--border);
+  min-width: 48px;
+  overflow: hidden;
+  white-space: pre;
+}
+
+textarea {
+  flex: 1;
+  padding: 16px;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  caret-color: var(--editor-caret);
+  overflow: auto;
+}
+
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.console {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: var(--console-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console .line {
+  padding: 2px 0;
+  border-radius: 4px;
+}
+
+.console .log { color: var(--console-log); }
+.console .err { color: var(--console-err); }
+.console .sys { color: var(--console-sys); }
+.console .help { 
+  color: var(--console-help); 
+  background: rgba(251, 191, 36, 0.1);
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border-left: 3px solid var(--console-help);
+}
+.console .help-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.console .help-code {
+  background: rgba(0,0,0,0.3);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  white-space: pre;
+}
+
+.prompt-wrap {
+  display: none;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.prompt-wrap.show {
+  display: flex;
+}
+
+.prompt-wrap input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.prompt-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.status {
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.running {
+  background: var(--accent);
+  animation: pulse 1s infinite;
+}
+
+.status-dot.error {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+footer {
+  padding: 12px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 2000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.kbd-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+kbd {
+  padding: 2px 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+}
+
+.help-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+}
+
+.help-modal.show {
+  display: flex;
+}
+
+.help-content {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+.help-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.help-body {
+  padding: 24px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.help-section pre {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  
+  .resizer {
+    width: 100%;
+    height: 12px;
+    top: calc(50% - 6px);
+    left: 0;
+    cursor: row-resize;
+  }
+  
+  .resizer::after {
+    width: 48px;
+    height: 4px;
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .kbd-hint {
+    display: none;
+  }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">C</div>
+    <div class="logo-text">APCS <span>PSEUDOCODE</span> CONSOLE (v2.11)</div>
+  </div>
+  <div class="header-actions">
+    <button class="ghost" id="helpBtn" title="Syntax Reference">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      Help
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="resizer" id="resizer"></div>
+  
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Program Editor (INPUT)</h2>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="primary" id="runBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Run
+        </button>
+        <button class="danger" id="stopBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+          Stop
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="toolbar-group">
+        <button id="copyBtn" class="ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+        <button id="apmlBtn" class="ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          APML
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="dropdown">
+        <button class="dropdown-trigger ghost" id="samplesBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Examples
+        </button>
+        <div class="dropdown-menu" id="samplesMenu"></div>
+      </div>
+      
+      <div class="kbd-hint">
+        <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run
+      </div>
+    </div>
+    <div class="editor-wrapper">
+      <div class="line-numbers" id="lineNumbers"></div>
+      <textarea id="editor" placeholder="Write your APCSP pseudocode here..." spellcheck="false"></textarea>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Console (Output)</h2>
+    </div>
+    <div class="console" id="console"></div>
+    <div class="prompt-wrap" id="promptWrap">
+      <input id="promptInput" placeholder="Enter input…" />
+      <button id="promptOk" class="primary">Submit</button>
+      <button id="promptCancel">Cancel</button>
+    </div>
+    <div class="status" id="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+  </section>
+</main>
+
+<footer>
+  ©Citrin, TechBoston Academy
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<div class="help-modal" id="helpModal">
+  <div class="help-content">
+    <div class="help-header">
+      <h3>📖 APCSP Syntax Reference</h3>
+      <button class="ghost" id="closeHelp">✕</button>
+    </div>
+    <div class="help-body">
+      <div class="help-section">
+        <h4>Assignment, Display, and Input</h4>
+        <pre>a ← expression
+DISPLAY(expression)
+INPUT()</pre>
+      </div>
+      <div class="help-section">
+        <h4>Arithmetic Operators</h4>
+        <pre>a + b    a - b    a * b    a / b
+a MOD b</pre>
+      </div>
+      <div class="help-section">
+        <h4>Relational and Boolean Operators</h4>
+        <pre>a = b    a ≠ b    a > b    a < b    a ≥ b    a ≤ b
+NOT condition
+condition1 AND condition2
+condition1 OR condition2</pre>
+      </div>
+      <div class="help-section">
+        <h4>Selection</h4>
+        <pre>IF(condition)
+{
+   &lt;block of statements&gt;
+}
+
+IF(condition)
+{
+   &lt;first block of statements&gt;
+}
+ELSE
+{
+   &lt;second block of statements&gt;
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>Iteration</h4>
+        <pre>REPEAT n TIMES
+{
+   &lt;block of statements&gt;
+}
+
+REPEAT UNTIL(condition)
+{
+   &lt;block of statements&gt;
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>List Operations</h4>
+        <pre>aList ← [value1, value2, value3]
+aList[i]
+x ← aList[i]
+aList[i] ← x
+INSERT(aList, i, value)
+APPEND(aList, value)
+REMOVE(aList, i)
+LENGTH(aList)
+
+FOR EACH item IN aList
+{
+   &lt;block of statements&gt;
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>Procedures</h4>
+        <pre>PROCEDURE procName(parameter1, parameter2, ...)
+{
+   &lt;block of statements&gt;
+}
+
+PROCEDURE procName(parameter1, parameter2, ...)
+{
+   &lt;block of statements&gt;
+   RETURN(expression)
+}</pre>
+      </div>
+      <div class="help-section">
+        <h4>Built-in Functions</h4>
+        <pre>RANDOM(a, b)
+LENGTH(aList)</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+
+  const logEl = $("#console"), statusText = $("#statusText"), statusDot = $("#statusDot"), editor = $("#editor");
+  const lineNumbers = $("#lineNumbers");
+  const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
+  const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
+  const toast = $("#toast");
+  const helpModal = $("#helpModal");
+  
+  let halted = false, inputResolve = null, inputReject = null;
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2000);
+  }
+
+  function updateLineNumbers() {
+    const lines = editor.value.split('\n').length;
+    lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+  }
+
+  editor.addEventListener('input', updateLineNumbers);
+  editor.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editor.scrollTop;
+  });
+
+  function formatValue(val) {
+    if (val === null || val === undefined) {
+      return "undefined";
+    }
+    if (Array.isArray(val)) {
+      return "[" + val.map(v => {
+        if (typeof v === "string") return '"' + v + '"';
+        if (Array.isArray(v)) return formatValue(v);
+        return String(v);
+      }).join(", ") + "]";
+    }
+    return String(val);
+  }
+
+  const out = (m, c = "log") => {
+    const d = document.createElement("div");
+    d.className = "line " + c;
+    if (typeof m === 'object' && m !== null && m.html) {
+      d.innerHTML = m.html;
+    } else {
+      d.textContent = formatValue(m);
+    }
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  
+  const log = m => out(m, "log");
+  const err = m => out(m, "err");
+  const sys = m => out(m, "sys");
+  const help = (title, description, example) => {
+    out({
+      html: `<div class="help-title">💡 ${title}</div>${description}<div class="help-code">${example}</div>`
+    }, "help");
+  };
+
+  const setStatus = (s, state = "idle") => {
+    statusText.textContent = s;
+    statusDot.className = "status-dot";
+    if (state === "running") statusDot.classList.add("running");
+    if (state === "error") statusDot.classList.add("error");
+  };
+
+  const syntaxHelp = {
+    procedure: {
+      title: "PROCEDURE Syntax Error",
+      desc: "Procedures must follow this exact format:",
+      example: `PROCEDURE procName(parameter1, parameter2)
+{
+   <block of statements>
+   RETURN(expression)
+}`
+    },
+    if: {
+      title: "IF Statement Syntax Error",
+      desc: "IF statements require parentheses around the condition:",
+      example: `IF(condition)
+{
+   <block of statements>
+}
+ELSE
+{
+   <block of statements>
+}`
+    },
+    nestedIf: {
+      title: "Nested IF Syntax",
+      desc: "You can nest IF statements inside each other:",
+      example: `IF(condition1)
+{
+   IF(condition2)
+   {
+      <statements>
+   }
+}`
+    },
+    repeatTimes: {
+      title: "REPEAT TIMES Syntax Error",
+      desc: "The REPEAT n TIMES loop format:",
+      example: `REPEAT n TIMES
+{
+   <block of statements>
+}`
+    },
+    repeatUntil: {
+      title: "REPEAT UNTIL Syntax Error",
+      desc: "The REPEAT UNTIL loop format:",
+      example: `REPEAT UNTIL(condition)
+{
+   <block of statements>
+}`
+    },
+    forEach: {
+      title: "FOR EACH Syntax Error",
+      desc: "The FOR EACH loop format (APCSP compliant):",
+      example: `FOR EACH item IN aList
+{
+   DISPLAY(item)
+}`
+    },
+    assignment: {
+      title: "Assignment Syntax Error",
+      desc: "Use the arrow operator ← for assignment:",
+      example: `variable ← value
+variable ← expression
+aList[i] ← value`
+    },
+    display: {
+      title: "DISPLAY Syntax Error",
+      desc: "DISPLAY requires parentheses:",
+      example: `DISPLAY(expression)
+DISPLAY("Hello World")
+DISPLAY(variable)`
+    },
+    list: {
+      title: "List Syntax Error",
+      desc: "Lists use 1-based indexing:",
+      example: `aList ← [value1, value2, value3]
+aList[1]
+aList[i] ← value
+LENGTH(aList)
+APPEND(aList, value)
+INSERT(aList, i, value)
+REMOVE(aList, i)`
+    },
+    return: {
+      title: "RETURN Syntax Error",
+      desc: "RETURN must be inside a procedure:",
+      example: `PROCEDURE procName(param)
+{
+   RETURN(expression)
+}`
+    },
+    block: {
+      title: "Block Syntax Error",
+      desc: "Code blocks must use curly braces:",
+      example: `IF(condition)
+{
+   <statements here>
+}`
+    },
+    brace: {
+      title: "Brace Mismatch Error",
+      desc: "Every opening { must have a matching closing }:",
+      example: `PROCEDURE example()
+{
+   IF(condition)
+   {
+      <nested code>
+   }
+}`
+    },
+    boolean: {
+      title: "Boolean Expression Error",
+      desc: "Boolean expressions evaluate to true or false:",
+      example: `a = b
+a ≠ b
+a > b    a < b    a ≥ b    a ≤ b
+NOT condition
+cond1 AND cond2
+cond1 OR cond2`
+    },
+    random: {
+      title: "RANDOM Syntax Error",
+      desc: "RANDOM generates a random integer from a to b inclusive:",
+      example: `RANDOM(1, 10)`
+    },
+    mod: {
+      title: "MOD Operator Error",
+      desc: "MOD returns the remainder of division:",
+      example: `17 MOD 5
+x MOD 2 = 0`
+    },
+    input: {
+      title: "INPUT Syntax Error",
+      desc: "INPUT accepts a value from the user:",
+      example: `name ← INPUT()
+DISPLAY("Hello " + name)`
+    },
+    undefined: {
+      title: "Undefined Variable Error",
+      desc: "Make sure variables are assigned before use:",
+      example: `x ← 10
+DISPLAY(x)`
+    },
+    length: {
+      title: "LENGTH Syntax Error",
+      desc: "LENGTH returns the number of elements in a list:",
+      example: `aList ← [1, 2, 3]
+len ← LENGTH(aList)`
+    },
+    append: {
+      title: "APPEND Syntax Error",
+      desc: "APPEND adds a value to the end of a list:",
+      example: `aList ← [1, 2]
+APPEND(aList, 3)`
+    },
+    insert: {
+      title: "INSERT Syntax Error",
+      desc: "INSERT adds a value at a specific index:",
+      example: `aList ← [1, 3]
+INSERT(aList, 2, 2)`
+    },
+    remove: {
+      title: "REMOVE Syntax Error",
+      desc: "REMOVE removes a value at a specific index:",
+      example: `aList ← [1, 2, 3]
+REMOVE(aList, 2)`
+    }
+  };
+
+  function showSyntaxHelp(type) {
+    const h = syntaxHelp[type];
+    if (h) {
+      help(h.title, h.desc, h.example);
+    }
+  }
+
+  function detectAndShowHelp(errorMsg, line) {
+    const lowerErr = errorMsg.toLowerCase();
+    const lowerLine = line ? line.toLowerCase() : "";
+    
+    if (lowerErr.includes("undefined") || lowerErr.includes("is not defined")) {
+      showSyntaxHelp("undefined");
+    } else if (lowerErr.includes("unclosed") || lowerErr.includes("missing closing") || lowerErr.includes("unexpected }") || lowerErr.includes("unexpected {") || lowerErr.includes("no matching")) {
+      showSyntaxHelp("brace");
+    } else if (lowerErr.includes("procedure") || lowerLine.startsWith("procedure")) {
+      showSyntaxHelp("procedure");
+    } else if (lowerErr.includes("nested") && lowerErr.includes("if")) {
+      showSyntaxHelp("nestedIf");
+    } else if (lowerErr.includes("if") || lowerLine.startsWith("if")) {
+      showSyntaxHelp("if");
+    } else if (lowerErr.includes("repeat") && lowerErr.includes("times")) {
+      showSyntaxHelp("repeatTimes");
+    } else if (lowerErr.includes("repeat") && lowerErr.includes("until")) {
+      showSyntaxHelp("repeatUntil");
+    } else if (lowerErr.includes("for each") || lowerLine.startsWith("for each")) {
+      showSyntaxHelp("forEach");
+    } else if (lowerErr.includes("return")) {
+      showSyntaxHelp("return");
+    } else if (lowerErr.includes("display")) {
+      showSyntaxHelp("display");
+    } else if (lowerErr.includes("random")) {
+      showSyntaxHelp("random");
+    } else if (lowerErr.includes("mod")) {
+      showSyntaxHelp("mod");
+    } else if (lowerErr.includes("input")) {
+      showSyntaxHelp("input");
+    } else if (lowerErr.includes("length")) {
+      showSyntaxHelp("length");
+    } else if (lowerErr.includes("append")) {
+      showSyntaxHelp("append");
+    } else if (lowerErr.includes("insert")) {
+      showSyntaxHelp("insert");
+    } else if (lowerErr.includes("remove")) {
+      showSyntaxHelp("remove");
+    } else if (lowerErr.includes("list") || lowerErr.includes("index")) {
+      showSyntaxHelp("list");
+    } else if (lowerErr.includes("boolean") || lowerErr.includes("and") || lowerErr.includes("or") || lowerErr.includes("not")) {
+      showSyntaxHelp("boolean");
+    } else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) {
+      showSyntaxHelp("assignment");
+    } else if (lowerErr.includes("{") || lowerErr.includes("}") || lowerErr.includes("block") || lowerErr.includes("followed by")) {
+      showSyntaxHelp("block");
+    }
+  }
+
+  function showPrompt(label) {
+    promptInput.value = "";
+    promptInput.placeholder = label || "Input";
+    promptWrap.classList.add("show");
+    promptInput.focus();
+    return new Promise((res, rej) => { inputResolve = res; inputReject = rej; });
+  }
+  
+  function hidePrompt() { promptWrap.classList.remove("show"); }
+  
+  promptOk.onclick = () => {
+    if (inputResolve) {
+      inputResolve(promptInput.value);
+      hidePrompt();
+      inputResolve = null;
+      inputReject = null;
+    }
+  };
+  
+  promptCancel.onclick = () => {
+    if (inputReject) {
+      inputReject(new Error("Input cancelled"));
+      hidePrompt();
+      inputResolve = null;
+      inputReject = null;
+    }
+  };
+  
+  promptInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") promptOk.click();
+    if (e.key === "Escape") promptCancel.click();
+  });
+
+  function preprocess(src) {
+    return src.split(/\r?\n/).map((raw, idx) => {
+      const s = raw
+        .replace(/#.*$/, "").replace(/\/\/.*$/, "")
+        .replace(/\t/g, "    ").trim();
+      return { idx, raw, s };
+    });
+  }
+
+  function validateBraces(lines) {
+    let depth = 0;
+    let expectingOpen = false;
+    let lastConstruct = null;
+    let lastConstructLine = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const { s, idx } = lines[i];
+      if (!s) continue;
+      
+      if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(s) && !s.includes("{")) {
+        if (expectingOpen) {
+          throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+        }
+        expectingOpen = true;
+        lastConstruct = s.match(/^(\w+)/i)[1].toUpperCase();
+        lastConstructLine = idx + 1;
+        continue;
+      }
+      
+      if (s === "{") {
+        if (!expectingOpen && depth === 0) {
+          let foundConstruct = false;
+          for (let j = i - 1; j >= 0; j--) {
+            if (lines[j].s) {
+              if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(lines[j].s)) {
+                foundConstruct = true;
+              }
+              break;
+            }
+          }
+          if (!foundConstruct) {
+            throw `Unexpected { at line ${idx + 1} - no matching control structure`;
+          }
+        }
+        expectingOpen = false;
+        depth++;
+      } else if (s === "}") {
+        if (expectingOpen) {
+          throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found } at line ${idx + 1}`;
+        }
+        depth--;
+        if (depth < 0) {
+          throw `Unexpected } at line ${idx + 1} - no matching opening brace`;
+        }
+      } else if (expectingOpen) {
+        throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+      }
+    }
+    
+    if (depth > 0) {
+      throw `Missing closing } - ${depth} unclosed block(s). Check that all IF, ELSE, REPEAT, FOR, and PROCEDURE blocks are properly closed`;
+    }
+    
+    if (expectingOpen) {
+      throw `${lastConstruct} at line ${lastConstructLine} must be followed by {`;
+    }
+  }
+
+  function parseProcedures(lines) {
+    const procs = {};
+    let i = 0;
+    while (i < lines.length) {
+      const t = lines[i].s;
+      if (/^PROCEDURE\b/i.test(t)) {
+        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
+        if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}. Format: PROCEDURE procName(param1, param2)`;
+        const name = m[1];
+        const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
+
+        i++;
+        if (i >= lines.length || lines[i].s !== "{") {
+          throw `PROCEDURE ${name} at line ${lines[i - 1].idx + 1} must be followed by {`;
+        }
+
+        const bodyStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < lines.length && depth > 0) {
+          if (lines[i].s === "{") depth++;
+          else if (lines[i].s === "}") depth--;
+          i++;
+        }
+
+        if (depth !== 0) throw `Unclosed PROCEDURE ${name}`;
+
+        const bodyEnd = i - 1;
+        procs[name] = { name, params, start: bodyStart, end: bodyEnd };
+      } else {
+        i++;
+      }
+    }
+    return procs;
+  }
+
+  let LINES = [], PROCS = null, ENV = null;
+
+  function makeEval(env, procs) {
+    const safe = /^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
+
+    function rewrite(expr) {
+      let result = expr
+        .replace(/[""]/g, '"')
+        .replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=")
+        .replace(/\bAND\b/gi, "&&").replace(/\bOR\b/gi, "||").replace(/\bNOT\b/gi, "!")
+        .replace(/\bMOD\b/gi, "%")
+        .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
+
+      result = result.replace(/([^<>!=])=([^=])/g, '$1==$2');
+
+      for (const procName in procs) {
+        const regex = new RegExp(`\\b${procName}\\s*\\(`, 'g');
+        result = result.replace(regex, `await ${procName}(`);
+      }
+
+      return result;
+    }
+
+    async function callProc(name, args, callerEnv) {
+      const def = procs[name];
+      if (!def) throw `Unknown procedure '${name}'`;
+      const local = Object.create(callerEnv);
+      for (let i = 0; i < def.params.length; i++) {
+        local[def.params[i]] = i < args.length ? args[i] : undefined;
+      }
+      const result = await execRange(def.start, def.end, local, true);
+      return result !== undefined && result !== null ? result : null;
+    }
+
+    return async function evalExpr(expr) {
+      const e = rewrite(expr);
+      if (!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
+
+      const scope = {
+        Math,
+        RANDOM: (a, b) => {
+          if (a === undefined || b === undefined) throw "RANDOM requires two arguments: RANDOM(a, b)";
+          return Math.floor(Math.random() * (b - a + 1)) + a;
+        },
+        INPUT: async () => {
+          const val = await showPrompt("Input");
+          return isNaN(val) || val === "" ? val : Number(val);
+        },
+        APPEND: (L, v) => {
+          if (!Array.isArray(L)) throw "APPEND: first argument must be a list";
+          if (v === undefined) throw "APPEND requires two arguments: APPEND(aList, value)";
+          L.push(v);
+        },
+        INSERT: (L, i, v) => {
+          if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
+          if (i === undefined || v === undefined) throw "INSERT requires three arguments: INSERT(aList, i, value)";
+          if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}. Must be between 1 and ${L.length + 1}`;
+          L.splice(i - 1, 0, v);
+        },
+        REMOVE: (L, i) => {
+          if (!Array.isArray(L)) throw "REMOVE: first argument must be a list";
+          if (i === undefined) throw "REMOVE requires two arguments: REMOVE(aList, i)";
+          if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}. List length is ${L.length}`;
+          L.splice(i - 1, 1);
+        },
+        LENGTH: L => {
+          if (L == null) throw "LENGTH: argument is undefined. Make sure the list exists.";
+          if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
+          return L.length;
+        },
+        IDX: (L, i) => {
+          if (L == null) throw "List access error: list is undefined. Make sure the list exists.";
+          if (!Array.isArray(L)) throw "List access error: variable is not a list";
+          if (i < 1 || i > L.length) throw `List index out of bounds: index ${i}, but list length is ${L.length}. Remember: lists are 1-indexed.`;
+          return L[i - 1];
+        }
+      };
+
+      let currentEnv = env;
+      while (currentEnv) {
+        for (const key of Object.getOwnPropertyNames(currentEnv)) {
+          if (!scope.hasOwnProperty(key)) {
+            scope[key] = currentEnv[key];
+          }
+        }
+        const proto = Object.getPrototypeOf(currentEnv);
+        if (!proto || proto === Object.prototype) break;
+        currentEnv = proto;
+      }
+
+      for (const name in procs) {
+        if (!scope.hasOwnProperty(name)) {
+          scope[name] = async (...args) => {
+            const result = await callProc(name, args, env);
+            return result;
+          };
+        }
+      }
+
+      const scopeKeys = Object.keys(scope);
+      const scopeValues = Object.values(scope);
+
+      try {
+        const asyncFn = new Function(...scopeKeys, `
+          return (async function() {
+            return (${e});
+          })();
+        `);
+        return await asyncFn(...scopeValues);
+      } catch (err) {
+        if (err.message && err.message.includes("is not defined")) {
+          const varMatch = err.message.match(/(\w+) is not defined/);
+          if (varMatch) {
+            throw `Variable '${varMatch[1]}' is not defined. Make sure to assign it a value first with: ${varMatch[1]} ← value`;
+          }
+        }
+        throw err.message || err;
+      }
+    };
+  }
+
+  async function execRange(start, end, env, insideProc = false) {
+    const evalExpr = makeEval(env, PROCS);
+    let i = start;
+
+    while (i < end) {
+      if (halted) return null;
+      const { s, idx } = LINES[i];
+
+      if (!s || s === "{" || s === "}") {
+        i++;
+        continue;
+      }
+
+      if (!insideProc && /^PROCEDURE\b/i.test(s)) {
+        const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
+        const name = m[1];
+        const def = PROCS[name];
+        i = def.end + 1;
+        continue;
+      }
+
+      if (/^RETURN\b/i.test(s)) {
+        if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}. RETURN can only be used inside a PROCEDURE.`;
+        const m = s.match(/^RETURN\s*\((.*)\)/i);
+        if (!m) throw `Invalid RETURN syntax at line ${idx + 1}. Use: RETURN(expression)`;
+        const returnVal = m[1].trim() ? await evalExpr(m[1]) : null;
+        return returnVal;
+      }
+
+      if (/^DISPLAY\s*\(/i.test(s)) {
+        const m = s.match(/^DISPLAY\s*\((.*)\)/i);
+        if (!m) throw `Invalid DISPLAY syntax at line ${idx + 1}. Use: DISPLAY(expression)`;
+        const val = await evalExpr(m[1]);
+        log(val);
+        i++;
+        continue;
+      }
+
+      if (/^[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)) {
+        const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
+        const varName = m[1];
+        const expr = m[2];
+        if (!expr.trim()) throw `Missing value in assignment at line ${idx + 1}. Use: ${varName} ← value`;
+        const val = await evalExpr(expr);
+
+        let targetEnv = env;
+        let found = false;
+        while (targetEnv) {
+          if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
+            targetEnv[varName] = val;
+            found = true;
+            break;
+          }
+          const proto = Object.getPrototypeOf(targetEnv);
+          if (!proto || proto === Object.prototype) break;
+          targetEnv = proto;
+        }
+
+        if (!found) {
+          env[varName] = val;
+        }
+
+        i++;
+        continue;
+      }
+
+      if (/^[A-Za-z_]\w*\s*\[\s*.*\s*\]\s*(←|<-)\s*(.*)$/.test(s)) {
+        const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
+        const listName = m[1];
+        const indexExpr = m[2];
+        const valueExpr = m[3];
+
+        const list = await evalExpr(listName);
+        const index = await evalExpr(indexExpr);
+        const value = await evalExpr(valueExpr);
+
+        if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx + 1}`;
+        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx + 1}. List length is ${list.length}. Remember: lists are 1-indexed.`;
+
+        list[index - 1] = value;
+        i++;
+        continue;
+      }
+
+      if (/^IF\s*\(/i.test(s)) {
+        const m = s.match(/^IF\s*\((.*)\)/i);
+        if (!m) throw `Invalid IF syntax at line ${idx + 1}. Use: IF(condition)`;
+        const cond = await evalExpr(m[1]);
+
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `IF at line ${idx + 1} must be followed by {`;
+        }
+
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+
+        if (cond) {
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (insideProc && result !== undefined && result !== null) {
+            return result;
+          }
+
+          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+            i++;
+            if (i < end && LINES[i].s === "{") {
+              depth = 1;
+              i++;
+              while (i < end && depth > 0) {
+                if (LINES[i].s === "{") depth++;
+                else if (LINES[i].s === "}") depth--;
+                i++;
+              }
+            }
+          }
+        } else {
+          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+            i++;
+            if (i >= end || LINES[i].s !== "{") {
+              throw `ELSE at line ${LINES[i - 1].idx + 1} must be followed by {`;
+            }
+
+            const elseStart = i + 1;
+            depth = 1;
+            i++;
+            while (i < end && depth > 0) {
+              if (LINES[i].s === "{") depth++;
+              else if (LINES[i].s === "}") depth--;
+              i++;
+            }
+            const elseEnd = i - 1;
+
+            const result = await execRange(elseStart, elseEnd, env, insideProc);
+            if (insideProc && result !== undefined && result !== null) {
+              return result;
+            }
+          }
+        }
+        continue;
+      }
+
+      if (/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)) {
+        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
+        const countExpr = m[1];
+        const n = await evalExpr(countExpr);
+
+        if (typeof n !== 'number' || n < 0) throw `REPEAT TIMES at line ${idx + 1}: count must be a non-negative number, got ${n}`;
+
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `REPEAT TIMES at line ${idx + 1} must be followed by {`;
+        }
+
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+
+        for (let rep = 0; rep < n; rep++) {
+          if (halted) return null;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+        }
+        continue;
+      }
+
+      if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
+        const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
+        if (!m) throw `Invalid REPEAT UNTIL syntax at line ${idx + 1}. Use: REPEAT UNTIL(condition)`;
+        const condExpr = m[1];
+
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `REPEAT UNTIL at line ${idx + 1} must be followed by {`;
+        }
+
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+
+        while (true) {
+          if (halted) return null;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+
+          const cond = await evalExpr(condExpr);
+          if (cond) break;
+        }
+        continue;
+      }
+
+      if (/^FOR\s+EACH\s+/i.test(s)) {
+        const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
+        if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}. Use: FOR EACH item IN aList`;
+        const itemVar = m[1];
+        const listExpr = m[2];
+
+        const list = await evalExpr(listExpr);
+        if (!Array.isArray(list)) throw `FOR EACH at line ${idx + 1}: ${listExpr} is not a list`;
+
+        i++;
+        if (i >= end || LINES[i].s !== "{") {
+          throw `FOR EACH at line ${idx + 1} must be followed by {`;
+        }
+
+        const blockStart = i + 1;
+        let depth = 1;
+        i++;
+        while (i < end && depth > 0) {
+          if (LINES[i].s === "{") depth++;
+          else if (LINES[i].s === "}") depth--;
+          i++;
+        }
+        const blockEnd = i - 1;
+
+        for (const item of list) {
+          if (halted) return null;
+          env[itemVar] = item;
+          const result = await execRange(blockStart, blockEnd, env, insideProc);
+          if (result !== undefined && result !== null && insideProc) return result;
+        }
+
+        delete env[itemVar];
+        continue;
+      }
+
+      if (/^(APPEND|INSERT|REMOVE)\s*\(/i.test(s)) {
+        await evalExpr(s);
+        i++;
+        continue;
+      }
+
+      if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
+        const m = s.match(/^([A-Za-z_]\w*)/);
+        if (m && PROCS[m[1]]) {
+          await evalExpr(s);
+          i++;
+          continue;
+        }
+      }
+
+      throw `Unknown statement at line ${idx + 1}: "${s}"`;
+    }
+    return null;
+  }
+
+  async function run(src) {
+    halted = false;
+    logEl.innerHTML = "";
+    setStatus("Parsing…", "running");
+    
+    try {
+      LINES = preprocess(src);
+      validateBraces(LINES);
+      PROCS = parseProcedures(LINES);
+      ENV = Object.create(null);
+    } catch (e) {
+      err("Parse Error: " + e);
+      detectAndShowHelp(String(e), "");
+      setStatus("Parse Error", "error");
+      return;
+    }
+
+    setStatus("Running…", "running");
+    try {
+      await execRange(0, LINES.length, ENV, false);
+      setStatus("Finished");
+      sys("✓ Program completed successfully");
+    } catch (e) {
+      err("Runtime Error: " + e);
+      const lineMatch = String(e).match(/line\s*(\d+)/i);
+      const lineNum = lineMatch ? parseInt(lineMatch[1]) - 1 : -1;
+      const lineContent = lineNum >= 0 && LINES[lineNum] ? LINES[lineNum].s : "";
+      detectAndShowHelp(String(e), lineContent);
+      setStatus("Error", "error");
+    }
+  }
+
+  $("#runBtn").onclick = () => run(editor.value);
+  $("#stopBtn").onclick = () => {
+    halted = true;
+    if (inputReject) {
+      inputReject(new Error("Stopped"));
+      hidePrompt();
+    }
+    setStatus("Stopped", "error");
+  };
+
+  $("#copyBtn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(editor.value);
+      showToast("Code copied to clipboard!");
+    } catch (e) {
+      err("Failed to copy code");
+    }
+  };
+
+  $("#apmlBtn").onclick = () => {
+    window.open("https://bakerfranke.github.io/apml/", "_blank");
+  };
+
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      $("#runBtn").click();
+    }
+  });
+
+  $("#helpBtn").onclick = () => helpModal.classList.add("show");
+  $("#closeHelp").onclick = () => helpModal.classList.remove("show");
+  helpModal.onclick = e => {
+    if (e.target === helpModal) helpModal.classList.remove("show");
+  };
+
+  const samples = {
+    variables: {
+      label: "Variables",
+      items: {
+        "Variables & Types": `num ← 42
+text ← "Hello"
+flag ← true
+
+DISPLAY(num)
+DISPLAY(text)
+DISPLAY(flag)`,
+        "Displaying Variables": `name ← "Alice"
+age ← 16
+DISPLAY("Name: " + name)
+DISPLAY("Age: " + age)`,
+        "Concatenation": `firstName ← "Ada"
+lastName ← "Lovelace"
+fullName ← firstName + " " + lastName
+DISPLAY(fullName)
+
+score ← 95
+DISPLAY("Your score is: " + score)`,
+        "Swapping Values": `a ← 10
+b ← 20
+DISPLAY("Before: a = " + a + ", b = " + b)
+
+temp ← a
+a ← b
+b ← temp
+
+DISPLAY("After: a = " + a + ", b = " + b)`,
+        "Booleans & Comparisons": `x ← 8
+y ← 10
+
+DISPLAY("x = " + x + ", y = " + y)
+DISPLAY("x > y is: " + (x > y))
+DISPLAY("x < y is: " + (x < y))
+DISPLAY("x = y is: " + (x = y))
+DISPLAY("x ≠ y is: " + (x ≠ y))`,
+        "Boolean Logic": `a ← true
+b ← false
+
+DISPLAY("a AND b: " + (a AND b))
+DISPLAY("a OR b: " + (a OR b))
+DISPLAY("NOT a: " + (NOT a))`,
+        "MOD Operator": `DISPLAY("17 MOD 5 = " + (17 MOD 5))
+DISPLAY("10 MOD 3 = " + (10 MOD 3))
+
+num ← 7
+IF(num MOD 2 = 0)
+{
+   DISPLAY(num + " is even")
+}
+ELSE
+{
+   DISPLAY(num + " is odd")
+}`,
+        "RANDOM Function": `roll ← RANDOM(1, 6)
+DISPLAY("Dice roll: " + roll)
+
+coin ← RANDOM(1, 2)
+IF(coin = 1)
+{
+   DISPLAY("Heads!")
+}
+ELSE
+{
+   DISPLAY("Tails!")
+}`
+      }
+    },
+    conditionals: {
+      label: "Conditionals",
+      items: {
+        "IF Statement": `age ← 18
+IF(age ≥ 18)
+{
+   DISPLAY("You can vote!")
+}`,
+        "IF-ELSE": `score ← 75
+IF(score ≥ 60)
+{
+   DISPLAY("You passed!")
+}
+ELSE
+{
+   DISPLAY("Try again.")
+}`,
+        "Nested IF": `grade ← 85
+
+IF(grade ≥ 90)
+{
+   DISPLAY("A")
+}
+ELSE
+{
+   IF(grade ≥ 80)
+   {
+      DISPLAY("B")
+   }
+   ELSE
+   {
+      IF(grade ≥ 70)
+      {
+         DISPLAY("C")
+      }
+      ELSE
+      {
+         DISPLAY("Below C")
+      }
+   }
+}`,
+        "Boolean Conditions": `x ← 15
+IF(x > 10 AND x < 20)
+{
+   DISPLAY("x is between 10 and 20")
+}`,
+        "NOT Operator": `isRaining ← false
+IF(NOT isRaining)
+{
+   DISPLAY("Go outside!")
+}
+ELSE
+{
+   DISPLAY("Take an umbrella")
+}`
+      }
+    },
+    loops: {
+      label: "Loops",
+      items: {
+        "REPEAT n TIMES": `REPEAT 5 TIMES
+{
+   DISPLAY("Hello!")
+}`,
+        "REPEAT with Counter": `count ← 1
+REPEAT 5 TIMES
+{
+   DISPLAY("Count: " + count)
+   count ← count + 1
+}`,
+        "REPEAT UNTIL": `num ← 1
+REPEAT UNTIL(num > 5)
+{
+   DISPLAY(num)
+   num ← num + 1
+}`,
+        "FOR EACH with List": `colors ← ["red", "green", "blue"]
+FOR EACH color IN colors
+{
+   DISPLAY(color)
+}`,
+        "Sum with FOR EACH": `numbers ← [10, 20, 30, 40]
+sum ← 0
+FOR EACH num IN numbers
+{
+   sum ← sum + num
+}
+DISPLAY("Sum: " + sum)`
+      }
+    },
+    lists: {
+      label: "Lists",
+      items: {
+        "Create & Access": `myList ← [10, 20, 30, 40]
+DISPLAY(myList[1])
+DISPLAY(myList[3])
+DISPLAY("Length: " + LENGTH(myList))
+DISPLAY("Full list: " + myList)`,
+        "Modify Elements": `nums ← [5, 10, 15]
+DISPLAY("Before: " + nums)
+nums[2] ← 99
+DISPLAY("After: " + nums)`,
+        "APPEND": `items ← [1, 2, 3]
+DISPLAY("Before: " + items)
+APPEND(items, 4)
+APPEND(items, 5)
+DISPLAY("After: " + items)`,
+        "INSERT": `letters ← ["A", "C", "D"]
+DISPLAY("Before: " + letters)
+INSERT(letters, 2, "B")
+DISPLAY("After: " + letters)`,
+        "REMOVE": `data ← [10, 20, 30, 40]
+DISPLAY("Before: " + data)
+REMOVE(data, 2)
+DISPLAY("After: " + data)`,
+        "Search in List": `names ← ["Alice", "Bob", "Charlie"]
+searchFor ← "Bob"
+found ← false
+
+FOR EACH name IN names
+{
+   IF(name = searchFor)
+   {
+      found ← true
+   }
+}
+
+IF(found)
+{
+   DISPLAY(searchFor + " was found!")
+}
+ELSE
+{
+   DISPLAY(searchFor + " was not found.")
+}`
+      }
+    },
+    procedures: {
+      label: "Procedures",
+      items: {
+        "Simple Procedure": `PROCEDURE greet(name)
+{
+   DISPLAY("Hello, " + name + "!")
+}
+
+greet("Alice")
+greet("Bob")`,
+        "Procedure with Return": `PROCEDURE square(n)
+{
+   RETURN(n * n)
+}
+
+result ← square(5)
+DISPLAY("5 squared is " + result)`,
+        "Multiple Parameters": `PROCEDURE add(a, b)
+{
+   RETURN(a + b)
+}
+
+sum ← add(10, 25)
+DISPLAY("10 + 25 = " + sum)`,
+        "Procedure Calling Procedure": `PROCEDURE double(x)
+{
+   RETURN(x * 2)
+}
+
+PROCEDURE quadruple(x)
+{
+   RETURN(double(double(x)))
+}
+
+DISPLAY(quadruple(5))`
+      }
+    },
+    programs: {
+      label: "Program Samples",
+      items: {
+        "1. Variables & Booleans": `name ← "Student"
+score1 ← 85
+score2 ← 92
+
+DISPLAY("Welcome, " + name + "!")
+DISPLAY("Score 1: " + score1)
+DISPLAY("Score 2: " + score2)
+
+average ← (score1 + score2) / 2
+DISPLAY("Average: " + average)
+
+DISPLAY("Score1 > Score2: " + (score1 > score2))
+DISPLAY("Both above 80: " + (score1 > 80 AND score2 > 80))`,
+
+        "2. Variables & IF": `DISPLAY("Enter your score:")
+score ← INPUT()
+
+IF(score ≥ 90)
+{
+   grade ← "A"
+}
+ELSE
+{
+   IF(score ≥ 80)
+   {
+      grade ← "B"
+   }
+   ELSE
+   {
+      IF(score ≥ 70)
+      {
+         grade ← "C"
+      }
+      ELSE
+      {
+         grade ← "F"
+      }
+   }
+}
+
+DISPLAY("Grade: " + grade)`,
+
+        "3. Variables, List & IF": `scores ← [78, 92, 65, 88, 95, 71]
+DISPLAY("Scores: " + scores)
+
+max ← scores[1]
+FOR EACH score IN scores
+{
+   IF(score > max)
+   {
+      max ← score
+   }
+}
+
+DISPLAY("Highest score: " + max)
+
+IF(max ≥ 90)
+{
+   DISPLAY("Top score is an A!")
+}`,
+
+        "4. List, Loop & IF": `grades ← [85, 42, 78, 95, 55, 67, 88, 39]
+passingCount ← 0
+failingCount ← 0
+
+FOR EACH grade IN grades
+{
+   IF(grade ≥ 60)
+   {
+      passingCount ← passingCount + 1
+   }
+   ELSE
+   {
+      failingCount ← failingCount + 1
+   }
+}
+
+DISPLAY("All grades: " + grades)
+DISPLAY("Number passing: " + passingCount)
+DISPLAY("Number failing: " + failingCount)`,
+
+        "5. Procedures & Return": `PROCEDURE calculateSum(numList)
+{
+   total ← 0
+   FOR EACH num IN numList
+   {
+      total ← total + num
+   }
+   RETURN(total)
+}
+
+PROCEDURE findMax(numList)
+{
+   maxVal ← numList[1]
+   FOR EACH num IN numList
+   {
+      IF(num > maxVal)
+      {
+         maxVal ← num
+      }
+   }
+   RETURN(maxVal)
+}
+
+data ← [23, 67, 45, 89, 12, 56]
+DISPLAY("Data: " + data)
+DISPLAY("Sum: " + calculateSum(data))
+DISPLAY("Max: " + findMax(data))`,
+
+        "6. Login System (Full)": `usernames ← ["admin", "student1", "teacher"]
+passwords ← ["pass123", "learn456", "teach789"]
+
+PROCEDURE checkCredentials(inputUser, inputPass)
+{
+   index ← 1
+   FOR EACH user IN usernames
+   {
+      IF(user = inputUser)
+      {
+         IF(passwords[index] = inputPass)
+         {
+            RETURN(true)
+         }
+      }
+      index ← index + 1
+   }
+   RETURN(false)
+}
+
+PROCEDURE login(user, pass)
+{
+   isValid ← checkCredentials(user, pass)
+   IF(isValid)
+   {
+      DISPLAY("ACCESS GRANTED")
+   }
+   ELSE
+   {
+      DISPLAY("INTRUDER ALERT")
+   }
+   RETURN(isValid)
+}
+
+DISPLAY("Enter username:")
+enteredUser ← INPUT()
+DISPLAY("Enter password:")
+enteredPass ← INPUT()
+
+result ← login(enteredUser, enteredPass)`
+      }
+    }
+  };
+
+  const samplesMenu = $("#samplesMenu");
+  const categoryIcons = {
+    variables: "x",
+    conditionals: "?",
+    loops: "↻",
+    procedures: "ƒ",
+    lists: "[ ]",
+    programs: "◆"
+  };
+
+  for (const [catKey, category] of Object.entries(samples)) {
+    const catEl = document.createElement("div");
+    catEl.className = "dropdown-category";
+    catEl.textContent = category.label;
+    samplesMenu.appendChild(catEl);
+
+    for (const [name, code] of Object.entries(category.items)) {
+      const item = document.createElement("div");
+      item.className = `dropdown-item cat-${catKey}`;
+      item.innerHTML = `<span class="icon">${categoryIcons[catKey]}</span>${name}`;
+      item.onclick = () => {
+        editor.value = code;
+        updateLineNumbers();
+        samplesMenu.classList.remove("show");
+      };
+      samplesMenu.appendChild(item);
+    }
+  }
+
+  const samplesBtn = $("#samplesBtn");
+  samplesBtn.onclick = (e) => {
+    e.stopPropagation();
+    samplesMenu.classList.toggle("show");
+  };
+
+  document.addEventListener("click", () => {
+    samplesMenu.classList.remove("show");
+  });
+
+  samplesMenu.onclick = (e) => e.stopPropagation();
+
+  editor.value = `DISPLAY("Welcome to AP CSP Console!")
+DISPLAY("Select an example from the menu above.")`;
+  updateLineNumbers();
+
+  const resizer = $("#resizer");
+  const mainEl = $("main");
+  let isResizing = false;
+
+  resizer.addEventListener("mousedown", (e) => {
+    isResizing = true;
+    document.body.style.cursor = "col-resize";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isResizing) return;
+    const mainRect = mainEl.getBoundingClientRect();
+    const offsetX = e.clientX - mainRect.left;
+    const percentage = (offsetX / mainRect.width) * 100;
+    if (percentage > 20 && percentage < 80) {
+      mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
+      resizer.style.left = `calc(${percentage}% - 6px)`;
+    }
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = "";
+    }
+  });
+
+  setStatus("Ready");
+  sys("✓ Emulator ready. Press Run to execute.");
+});
+</script>
+</body>
+</html>
