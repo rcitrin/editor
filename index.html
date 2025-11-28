@@ -35,6 +35,20 @@
   --btn-secondary-border: #3a3a3a;
   --btn-secondary-hover: #383838;
 }
+
+body.light-mode {
+  --bg: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --panel-bg: #ffffff;
+  --panel-bg-hover: #f0f0f0;
+  --border: #d0d0d0;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --btn-secondary-bg: #e8e8e8;
+  --btn-secondary-border: #ccc;
+  --btn-secondary-hover: #ddd;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body { 
@@ -841,7 +855,12 @@ kbd {
     <div class="logo-icon">C</div>
     <div class="logo-text">APCS <span>PSEUDOCODE</span> CONSOLE (v2.5)</div>
   </div>
+
   <div class="header-actions">
+<button class="ghost" id="themeBtn" title="Toggle Light/Dark Mode">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+</button>
+
     <button class="ghost" id="helpBtn" title="Syntax Reference">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"></circle>
@@ -1069,6 +1088,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const blocksBody = $("#blocksBody");
   
   let halted = false, inputResolve = null, inputReject = null;
+
+$("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
 
   function showToast(msg) {
     toast.textContent = msg;
