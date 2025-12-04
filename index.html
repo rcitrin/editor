@@ -853,7 +853,7 @@ kbd {
 <header>
   <div class="logo">
     <div class="logo-icon">C</div>
-    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.6)</span> </div>
+    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.65)</span> </div>
   </div>
 
   <div class="header-actions">
@@ -1376,6 +1376,10 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
           if (v === undefined) throw "APPEND requires two arguments: APPEND(aList, value)";
           L.push(v);
         },
+        CONTAINS: (text, sub) => {
+          if (typeof text !== "string") throw "CONTAINS: first argument must be a string";
+          return text.includes(sub);
+        },
         INSERT: (L, i, v) => {
           if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
           if (i === undefined || v === undefined) throw "INSERT requires three arguments: INSERT(aList, i, value)";
@@ -1394,11 +1398,21 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
           return L.length;
         },
         IDX: (L, i) => {
-          if (L == null) throw "List access error: list is undefined. Make sure the list exists.";
-          if (!Array.isArray(L)) throw "List access error: variable is not a list";
-          if (i < 1 || i > L.length) throw `List index out of bounds: index ${i}, but list length is ${L.length}. Remember: lists are 1-indexed.`;
-          return L[i - 1];
-        }
+          i = Math.round(i) - 1;
+
+          if (typeof L === "string") {
+          if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+          return L.charAt(i);
+         },
+
+          if (!Array.isArray(L)) throw "IDX: first argument must be a list";
+          if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+          return L[i];
+},
+        CONTAINS: (text, sub) => {
+          if (typeof text !== "string") throw "CONTAINS: first argument must be a string";
+          return text.includes(sub);
+        },
       };
 
       let currentEnv = env;
