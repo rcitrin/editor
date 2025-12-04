@@ -853,7 +853,7 @@ kbd {
 <header>
   <div class="logo">
     <div class="logo-icon">C</div>
-    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.65)</span> </div>
+    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.61)</span> </div>
   </div>
 
   <div class="header-actions">
@@ -1065,1249 +1065,1273 @@ LENGTH(aList)</pre>
           <rect x="3" y="14" width="7" height="7" rx="1"></rect>
           <rect x="14" y="14" width="7" height="7" rx="1"></rect>
         </svg>
-        APCSP Blocks View
+        Block View (OUTPUT)
       </h3>
-      <button class="close-btn" id="closeBlocks">✕ Close</button>
+      <button class="ghost" id="closeBlocks">✕</button>
     </div>
-    <div class="blocks-body" id="blocksBody"></div>
+    <div class="blocks-body" id="blocksBody">
+      <div style="text-align:center; padding: 40px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+        </svg>
+        <p style="color: #888; margin-top: 10px;">Rendered blocks will appear here after clicking 'Blocks'</p>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-window.addEventListener("DOMContentLoaded", () => {
-  const $ = s => document.querySelector(s);
-  const $$ = s => document.querySelectorAll(s);
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 
-  const logEl = $("#console"), statusText = $("#statusText"), statusDot = $("#statusDot"), editor = $("#editor");
-  const lineNumbers = $("#lineNumbers");
-  const promptWrap = $("#promptWrap"), promptInput = $("#promptInput");
-  const promptOk = $("#promptOk"), promptCancel = $("#promptCancel");
-  const toast = $("#toast");
-  const helpModal = $("#helpModal");
-  const blocksModal = $("#blocksModal");
-  const blocksBody = $("#blocksBody");
+const editor = $("#editor");
+const lineNumbers = $("#lineNumbers");
+const logEl = $("#console");
+const promptWrap = $("#promptWrap");
+const promptInput = $("#promptInput");
+const promptOk = $("#promptOk");
+const promptCancel = $("#promptCancel");
+const statusDot = $("#statusDot");
+const statusText = $("#statusText");
+const blocksModal = $("#blocksModal");
+const blocksBody = $("#blocksBody");
+const toastEl = $("#toast");
+
+let inputResolve = null;
+let inputReject = null;
+let halted = false;
+
+// ===== UTILITIES =====
+
+function updateLineNumbers() {
+  const lines = editor.value.split(/\r?\n/);
+  lineNumbers.innerHTML = lines.map((_, i) => i + 1).join('\n');
+}
+
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), 3000);
+}
+
+function formatValue(val) {
+  if (typeof val === "boolean") return val ? "true" : "false";
+  if (val === null) return "null";
+  if (val === undefined) return "undefined";
+  if (typeof val === "string") return `"${val}"`;
+  if (Array.isArray(val)) {
+    return "[" + val.map(v => {
+      if (Array.isArray(v)) return formatValue(v); 
+      return String(v); 
+    }).join(", ") + "]";
+  }
+  return String(val);
+}
+
+const out = (m, c = "log") => {
+  const d = document.createElement("div");
+  d.className = "line " + c;
+  if (typeof m === 'object' && m !== null && m.html) {
+    d.innerHTML = m.html;
+  } else {
+    d.textContent = formatValue(m);
+  }
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+};
+
+const log = m => out(m, "log");
+const err = m => out(m, "err");
+const sys = m => out(m, "sys");
+const help = (title, description, example) => {
+  out({ html: `<div class="help-title">💡 ${title}</div>${description}<div class="help-code">${example}</div>` }, "help");
+};
+
+const setStatus = (s, state = "idle") => {
+  statusText.textContent = s;
+  statusDot.className = "status-dot";
+  if (state === "running") statusDot.classList.add("running");
+  if (state === "error") statusDot.classList.add("error");
+};
+
+const syntaxHelp = {
+  procedure: { title: "PROCEDURE Syntax Error", desc: "Procedures must follow this exact format:", example: `PROCEDURE procName(parameter1, parameter2)\n{\n <block of statements>\n RETURN(expression)\n}` },
+  if: { title: "IF Statement Syntax Error", desc: "IF statements require parentheses around the condition:", example: `IF(condition)\n{\n <block of statements>\n}\nELSE\n{\n <block of statements>\n}` },
+  nestedIf: { title: "Nested IF Syntax", desc: "You can nest IF statements inside each other:", example: `IF(condition1)\n{\n IF(condition2)\n {\n <statements>\n }\n}` },
+  repeatTimes: { title: "REPEAT TIMES Syntax Error", desc: "The REPEAT n TIMES loop format:", example: `REPEAT n TIMES\n{\n <block of statements>\n}` },
+  repeatUntil: { title: "REPEAT UNTIL Syntax Error", desc: "The REPEAT UNTIL loop format:", example: `REPEAT UNTIL(condition)\n{\n <block of statements>\n}` },
+  forEach: { title: "FOR EACH Syntax Error", desc: "The FOR EACH loop format:", example: `FOR EACH item IN aList\n{\n <block of statements>\n}` },
+  list: { title: "List Indexing Error", desc: "Lists are 1-indexed. Index must be between 1 and list length:", example: `aList ← [1, 2, 3]\nDISPLAY(aList[1])` },
+  assignment: { title: "Assignment Syntax Error", desc: "Assignment uses the left arrow (← or <-):", example: `myVar ← 10` },
+  display: { title: "DISPLAY Syntax Error", desc: "DISPLAY requires parentheses around the expression:", example: `DISPLAY("The result is " + x)` },
+  returns: { title: "RETURN Statement Error", desc: "RETURN can only be used inside a PROCEDURE block:", example: `PROCEDURE calc(a)\n{\n RETURN(a*2)\n}` },
+  block: { title: "Brace Mismatch Error", desc: "Every opening { must have a matching closing }:", example: `PROCEDURE example()\n{\n IF(condition)\n {\n <nested code>\n }\n}` },
+  boolean: { title: "Boolean Expression Error", desc: "Boolean expressions evaluate to true or false:", example: `a = b\na ≠ b\na > b a < b a ≥ b a ≤ b\nNOT condition\ncond1 AND cond2\ncond1 OR cond2` },
+  random: { title: "RANDOM Syntax Error", desc: "RANDOM generates a random integer from a to b inclusive:", example: `RANDOM(1, 10)` },
+  mod: { title: "MOD Operator Error", desc: "MOD returns the remainder of division:", example: `17 MOD 5\nx MOD 2 = 0` },
+  input: { title: "INPUT Syntax Error", desc: "INPUT accepts a value from the user:", example: `name ← INPUT()\nDISPLAY("Hello " + name)` },
+  undefined: { title: "Undefined Variable Error", desc: "Make sure variables are assigned before use:", example: `x ← 10\nDISPLAY(x)` },
+  length: { title: "LENGTH Syntax Error", desc: "LENGTH returns the number of elements in a list:", example: `aList ← [1, 2, 3]\nlen ← LENGTH(aList)` },
+  append: { title: "APPEND Syntax Error", desc: "APPEND adds a value to the end of a list:", example: `aList ← [1, 2]\nAPPEND(aList, 3)` },
+  insert: { title: "INSERT Syntax Error", desc: "INSERT adds a value at a specific index:", example: `aList ← [1, 3]\nINSERT(aList, 2, 2)` },
+  remove: { title: "REMOVE Syntax Error", desc: "REMOVE removes a value at a specific index:", example: `aList ← [1, 2, 3]\nREMOVE(aList, 2)` },
+  contains: { title: "CONTAINS Syntax Error", desc: "CONTAINS checks if one string is found within another:", example: `text ← "apple"\nDISPLAY(CONTAINS(text, "pp"))` }
+};
+
+function detectAndShowHelp(errorMsg, lineContent) {
+  const lowerErr = errorMsg.toLowerCase();
   
-  let halted = false, inputResolve = null, inputReject = null;
+  if (lowerErr.includes("undefined") && !lowerErr.includes("index") && !lowerErr.includes("length")) showSyntaxHelp("undefined");
+  else if (lowerErr.includes("procedure")) showSyntaxHelp("procedure");
+  else if (lowerErr.includes("if")) showSyntaxHelp("if");
+  else if (lowerErr.includes("repeat") && lowerErr.includes("times")) showSyntaxHelp("repeatTimes");
+  else if (lowerErr.includes("repeat") && lowerErr.includes("until")) showSyntaxHelp("repeatUntil");
+  else if (lowerErr.includes("for each")) showSyntaxHelp("forEach");
+  else if (lowerErr.includes("return")) showSyntaxHelp("returns");
+  else if (lowerErr.includes("random")) showSyntaxHelp("random");
+  else if (lowerErr.includes("mod")) showSyntaxHelp("mod");
+  else if (lowerErr.includes("display")) showSyntaxHelp("display");
+  else if (lowerErr.includes("input")) showSyntaxHelp("input");
+  else if (lowerErr.includes("length")) showSyntaxHelp("length");
+  else if (lowerErr.includes("append")) showSyntaxHelp("append");
+  else if (lowerErr.includes("insert")) showSyntaxHelp("insert");
+  else if (lowerErr.includes("remove")) showSyntaxHelp("remove");
+  else if (lowerErr.includes("contains")) showSyntaxHelp("contains");
+  else if (lowerErr.includes("list") || lowerErr.includes("index")) showSyntaxHelp("list");
+  else if (lowerErr.includes("boolean") || lowerErr.includes("and") || lowerErr.includes("or") || lowerErr.includes("not")) showSyntaxHelp("boolean");
+  else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) showSyntaxHelp("assignment");
+  else if (lowerErr.includes("{") || lowerErr.includes("}") || lowerErr.includes("block") || lowerErr.includes("followed by")) showSyntaxHelp("block");
 
-$("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
-
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2000);
+  // Fallback for general errors
+  if (!lowerErr.includes("syntax") && !lowerErr.includes("invalid") && !lowerErr.includes("unclosed")) {
+    // If it's a runtime error that might be missing a var, and we didn't show a specific help, show general undefined help.
+    if (lowerErr.includes("is not defined")) showSyntaxHelp("undefined");
+    if (lowerErr.includes("must be followed by")) showSyntaxHelp("block");
   }
+}
 
-  function updateLineNumbers() {
-    const lines = editor.value.split('\n').length;
-    lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
-  }
+function showSyntaxHelp(type) {
+  const h = syntaxHelp[type];
+  if (h) help(h.title, h.desc, h.example);
+}
 
-  editor.addEventListener('input', updateLineNumbers);
-  editor.addEventListener('scroll', () => {
-    lineNumbers.scrollTop = editor.scrollTop;
+function showPrompt(label) {
+  promptInput.value = "";
+  promptInput.placeholder = label || "Input";
+  promptWrap.classList.add("show");
+  promptInput.focus();
+  return new Promise((res, rej) => {
+    inputResolve = res;
+    inputReject = rej;
   });
+}
 
-  function formatValue(val) {
-    if (val === null || val === undefined) {
-      return "undefined";
-    }
-    if (Array.isArray(val)) {
-      return "[" + val.map(v => {
-        if (typeof v === "string") return '"' + v + '"';
-        if (Array.isArray(v)) return formatValue(v);
-        return String(v);
-      }).join(", ") + "]";
-    }
-    return String(val);
+function hidePrompt() {
+  promptWrap.classList.remove("show");
+}
+
+promptOk.onclick = () => {
+  if (inputResolve) {
+    inputResolve(promptInput.value);
+    hidePrompt();
+    inputResolve = null;
+    inputReject = null;
   }
+};
 
-  const out = (m, c = "log") => {
-    const d = document.createElement("div");
-    d.className = "line " + c;
-    if (typeof m === 'object' && m !== null && m.html) {
-      d.innerHTML = m.html;
-    } else {
-      d.textContent = formatValue(m);
-    }
-    logEl.appendChild(d);
-    logEl.scrollTop = logEl.scrollHeight;
-  };
-  
-  const log = m => out(m, "log");
-  const err = m => out(m, "err");
-  const sys = m => out(m, "sys");
-  const help = (title, description, example) => {
-    out({
-      html: `<div class="help-title">💡 ${title}</div>${description}<div class="help-code">${example}</div>`
-    }, "help");
-  };
-
-  const setStatus = (s, state = "idle") => {
-    statusText.textContent = s;
-    statusDot.className = "status-dot";
-    if (state === "running") statusDot.classList.add("running");
-    if (state === "error") statusDot.classList.add("error");
-  };
-
-  const syntaxHelp = {
-    procedure: { title: "PROCEDURE Syntax Error", desc: "Procedures must follow this exact format:", example: `PROCEDURE procName(parameter1, parameter2)\n{\n   <block of statements>\n   RETURN(expression)\n}` },
-    if: { title: "IF Statement Syntax Error", desc: "IF statements require parentheses around the condition:", example: `IF(condition)\n{\n   <block of statements>\n}\nELSE\n{\n   <block of statements>\n}` },
-    nestedIf: { title: "Nested IF Syntax", desc: "You can nest IF statements inside each other:", example: `IF(condition1)\n{\n   IF(condition2)\n   {\n      <statements>\n   }\n}` },
-    repeatTimes: { title: "REPEAT TIMES Syntax Error", desc: "The REPEAT n TIMES loop format:", example: `REPEAT n TIMES\n{\n   <block of statements>\n}` },
-    repeatUntil: { title: "REPEAT UNTIL Syntax Error", desc: "The REPEAT UNTIL loop format:", example: `REPEAT UNTIL(condition)\n{\n   <block of statements>\n}` },
-    forEach: { title: "FOR EACH Syntax Error", desc: "The FOR EACH loop format (APCSP compliant):", example: `FOR EACH item IN aList\n{\n   DISPLAY(item)\n}` },
-    assignment: { title: "Assignment Syntax Error", desc: "Use the arrow operator ← for assignment:", example: `variable ← value\nvariable ← expression\naList[i] ← value` },
-    display: { title: "DISPLAY Syntax Error", desc: "DISPLAY requires parentheses:", example: `DISPLAY(expression)\nDISPLAY("Hello World")\nDISPLAY(variable)` },
-    list: { title: "List Syntax Error", desc: "Lists use 1-based indexing:", example: `aList ← [value1, value2, value3]\naList[1]\naList[i] ← value\nLENGTH(aList)\nAPPEND(aList, value)\nINSERT(aList, i, value)\nREMOVE(aList, i)` },
-    return: { title: "RETURN Syntax Error", desc: "RETURN must be inside a procedure:", example: `PROCEDURE procName(param)\n{\n   RETURN(expression)\n}` },
-    block: { title: "Block Syntax Error", desc: "Code blocks must use curly braces:", example: `IF(condition)\n{\n   <statements here>\n}` },
-    brace: { title: "Brace Mismatch Error", desc: "Every opening { must have a matching closing }:", example: `PROCEDURE example()\n{\n   IF(condition)\n   {\n      <nested code>\n   }\n}` },
-    boolean: { title: "Boolean Expression Error", desc: "Boolean expressions evaluate to true or false:", example: `a = b\na ≠ b\na > b    a < b    a ≥ b    a ≤ b\nNOT condition\ncond1 AND cond2\ncond1 OR cond2` },
-    random: { title: "RANDOM Syntax Error", desc: "RANDOM generates a random integer from a to b inclusive:", example: `RANDOM(1, 10)` },
-    mod: { title: "MOD Operator Error", desc: "MOD returns the remainder of division:", example: `17 MOD 5\nx MOD 2 = 0` },
-    input: { title: "INPUT Syntax Error", desc: "INPUT accepts a value from the user:", example: `name ← INPUT()\nDISPLAY("Hello " + name)` },
-    undefined: { title: "Undefined Variable Error", desc: "Make sure variables are assigned before use:", example: `x ← 10\nDISPLAY(x)` },
-    length: { title: "LENGTH Syntax Error", desc: "LENGTH returns the number of elements in a list:", example: `aList ← [1, 2, 3]\nlen ← LENGTH(aList)` },
-    append: { title: "APPEND Syntax Error", desc: "APPEND adds a value to the end of a list:", example: `aList ← [1, 2]\nAPPEND(aList, 3)` },
-    insert: { title: "INSERT Syntax Error", desc: "INSERT adds a value at a specific index:", example: `aList ← [1, 3]\nINSERT(aList, 2, 2)` },
-    remove: { title: "REMOVE Syntax Error", desc: "REMOVE removes a value at a specific index:", example: `aList ← [1, 2, 3]\nREMOVE(aList, 2)` }
-  };
-
-  function showSyntaxHelp(type) {
-    const h = syntaxHelp[type];
-    if (h) help(h.title, h.desc, h.example);
+promptCancel.onclick = () => {
+  if (inputReject) {
+    inputReject(new Error("Input cancelled"));
+    hidePrompt();
+    inputResolve = null;
+    inputReject = null;
   }
+};
 
-  function detectAndShowHelp(errorMsg, line) {
-    const lowerErr = errorMsg.toLowerCase();
-    const lowerLine = line ? line.toLowerCase() : "";
-    
-    if (lowerErr.includes("undefined") || lowerErr.includes("is not defined")) showSyntaxHelp("undefined");
-    else if (lowerErr.includes("unclosed") || lowerErr.includes("missing closing") || lowerErr.includes("unexpected }") || lowerErr.includes("unexpected {") || lowerErr.includes("no matching")) showSyntaxHelp("brace");
-    else if (lowerErr.includes("procedure") || lowerLine.startsWith("procedure")) showSyntaxHelp("procedure");
-    else if (lowerErr.includes("nested") && lowerErr.includes("if")) showSyntaxHelp("nestedIf");
-    else if (lowerErr.includes("if") || lowerLine.startsWith("if")) showSyntaxHelp("if");
-    else if (lowerErr.includes("repeat") && lowerErr.includes("times")) showSyntaxHelp("repeatTimes");
-    else if (lowerErr.includes("repeat") && lowerErr.includes("until")) showSyntaxHelp("repeatUntil");
-    else if (lowerErr.includes("for each") || lowerLine.startsWith("for each")) showSyntaxHelp("forEach");
-    else if (lowerErr.includes("return")) showSyntaxHelp("return");
-    else if (lowerErr.includes("display")) showSyntaxHelp("display");
-    else if (lowerErr.includes("random")) showSyntaxHelp("random");
-    else if (lowerErr.includes("mod")) showSyntaxHelp("mod");
-    else if (lowerErr.includes("input")) showSyntaxHelp("input");
-    else if (lowerErr.includes("length")) showSyntaxHelp("length");
-    else if (lowerErr.includes("append")) showSyntaxHelp("append");
-    else if (lowerErr.includes("insert")) showSyntaxHelp("insert");
-    else if (lowerErr.includes("remove")) showSyntaxHelp("remove");
-    else if (lowerErr.includes("list") || lowerErr.includes("index")) showSyntaxHelp("list");
-    else if (lowerErr.includes("boolean") || lowerErr.includes("and") || lowerErr.includes("or") || lowerErr.includes("not")) showSyntaxHelp("boolean");
-    else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) showSyntaxHelp("assignment");
-    else if (lowerErr.includes("{") || lowerErr.includes("}") || lowerErr.includes("block") || lowerErr.includes("followed by")) showSyntaxHelp("block");
-  }
+promptInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") promptOk.click();
+  if (e.key === "Escape") promptCancel.click();
+});
 
-  function showPrompt(label) {
-    promptInput.value = "";
-    promptInput.placeholder = label || "Input";
-    promptWrap.classList.add("show");
-    promptInput.focus();
-    return new Promise((res, rej) => { inputResolve = res; inputReject = rej; });
-  }
-  
-  function hidePrompt() { promptWrap.classList.remove("show"); }
-  
-  promptOk.onclick = () => {
-    if (inputResolve) {
-      inputResolve(promptInput.value);
-      hidePrompt();
-      inputResolve = null;
-      inputReject = null;
-    }
-  };
-  
-  promptCancel.onclick = () => {
-    if (inputReject) {
-      inputReject(new Error("Input cancelled"));
-      hidePrompt();
-      inputResolve = null;
-      inputReject = null;
-    }
-  };
-  
-  promptInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") promptOk.click();
-    if (e.key === "Escape") promptCancel.click();
+
+// ===== PARSING & EXECUTION CORE =====
+
+function preprocess(src) {
+  return src.split(/\r?\n/).map((raw, idx) => {
+    const s = raw.replace(/#.*$/, "").replace(/\/\/.*$/, "").replace(/\t/g, " ").trim();
+    return { idx, raw, s };
   });
+}
 
-  function preprocess(src) {
-    return src.split(/\r?\n/).map((raw, idx) => {
-      const s = raw.replace(/#.*$/, "").replace(/\/\/.*$/, "").replace(/\t/g, "    ").trim();
-      return { idx, raw, s };
-    });
-  }
-
-  function validateBraces(lines) {
-    let depth = 0;
-    let expectingOpen = false;
-    let lastConstruct = null;
-    let lastConstructLine = 0;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const { s, idx } = lines[i];
-      if (!s) continue;
-      
-      if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(s) && !s.includes("{")) {
-        if (expectingOpen) throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+function validateBraces(lines) {
+  let depth = 0;
+  let expectingOpen = false;
+  let lastConstruct = "";
+  let lastConstructLine = 0;
+  for (const { s, idx } of lines) {
+    if (s.startsWith("IF(") || s.startsWith("ELSE") || s.startsWith("REPEAT") || s.startsWith("FOR EACH") || s.startsWith("PROCEDURE")) {
+      if (s !== "ELSE") {
+        if (expectingOpen) throw `${lastConstruct} at line ${lastConstructLine + 1} must be followed by { before the next construct at line ${idx + 1}`;
         expectingOpen = true;
-        lastConstruct = s.match(/^(\w+)/i)[1].toUpperCase();
-        lastConstructLine = idx + 1;
-        continue;
-      }
-      
-      if (s === "{") {
-        if (!expectingOpen && depth === 0) {
-          let foundConstruct = false;
-          for (let j = i - 1; j >= 0; j--) {
-            if (lines[j].s) {
-              if (/^(PROCEDURE|IF|ELSE|REPEAT|FOR)\b/i.test(lines[j].s)) foundConstruct = true;
-              break;
-            }
-          }
-          if (!foundConstruct) throw `Unexpected { at line ${idx + 1} - no matching control structure`;
-        }
-        expectingOpen = false;
-        depth++;
-      } else if (s === "}") {
-        if (expectingOpen) throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found } at line ${idx + 1}`;
-        depth--;
-        if (depth < 0) throw `Unexpected } at line ${idx + 1} - no matching opening brace`;
-      } else if (expectingOpen) {
-        throw `${lastConstruct} at line ${lastConstructLine} must be followed by { but found "${s}" at line ${idx + 1}`;
+        lastConstruct = s.split(/\s+/)[0];
+        lastConstructLine = idx;
       }
     }
     
-    if (depth > 0) throw `Missing closing } - ${depth} unclosed block(s). Check that all IF, ELSE, REPEAT, FOR, and PROCEDURE blocks are properly closed`;
-    if (expectingOpen) throw `${lastConstruct} at line ${lastConstructLine} must be followed by {`;
+    if (s === "{") {
+      depth++;
+      expectingOpen = false;
+    } else if (s === "}") {
+      depth--;
+      if (depth < 0) throw `Unmatched closing } at line ${idx + 1}`;
+    } else if (s && expectingOpen) {
+      // Line contains non-brace code, but we expected a brace.
+      throw `${lastConstruct} at line ${lastConstructLine + 1} must be followed by { at line ${idx + 1}.`;
+    }
   }
+  if (depth !== 0) throw `Missing closing } - ${depth} unclosed block(s). Check that all IF, ELSE, REPEAT, FOR, and PROCEDURE blocks are properly closed`;
+  if (expectingOpen) throw `${lastConstruct} at line ${lastConstructLine + 1} must be followed by {`;
+}
 
-  function parseProcedures(lines) {
-    const procs = {};
-    let i = 0;
-    while (i < lines.length) {
-      const t = lines[i].s;
-      if (/^PROCEDURE\b/i.test(t)) {
-        const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
-        if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}. Format: PROCEDURE procName(param1, param2)`;
-        const name = m[1];
-        const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
-
-        i++;
-        if (i >= lines.length || lines[i].s !== "{") throw `PROCEDURE ${name} at line ${lines[i - 1].idx + 1} must be followed by {`;
-
-        const bodyStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < lines.length && depth > 0) {
-          if (lines[i].s === "{") depth++;
-          else if (lines[i].s === "}") depth--;
-          i++;
-        }
-
-        if (depth !== 0) throw `Unclosed PROCEDURE ${name}`;
-
-        const bodyEnd = i - 1;
-        procs[name] = { name, params, start: bodyStart, end: bodyEnd };
-      } else {
+function parseProcedures(lines) {
+  const procs = {};
+  let i = 0;
+  while (i < lines.length) {
+    const t = lines[i].s;
+    if (/^PROCEDURE\b/i.test(t)) {
+      const m = t.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
+      if (!m) throw `Bad PROCEDURE syntax at line ${lines[i].idx + 1}. Format: PROCEDURE procName(param1, param2)`;
+      const name = m[1];
+      const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
+      
+      i++;
+      if (i >= lines.length || lines[i].s !== "{") throw `PROCEDURE ${name} at line ${lines[i - 1].idx + 1} must be followed by {`;
+      
+      const bodyStart = i + 1;
+      let depth = 1;
+      i++;
+      while (i < lines.length && depth > 0) {
+        if (lines[i].s === "{") depth++;
+        else if (lines[i].s === "}") depth--;
         i++;
       }
+      if (depth !== 0) throw `Unclosed PROCEDURE ${name}`;
+      const bodyEnd = i - 1;
+
+      procs[name] = { name, params, start: bodyStart, end: bodyEnd };
+    } else {
+      i++;
     }
-    return procs;
   }
+  return procs;
+}
 
-  let LINES = [], PROCS = null, ENV = null;
+let LINES = [], PROCS = null, ENV = null;
 
-  function makeEval(env, procs) {
-    const safe = /^[\w\s+\-*/%().,<>!="""'\[\]≤≥≠?:&|]+$/u;
+// Built-in functions available in the expression evaluator
+const FUNCTIONS = {
+    DISPLAY: m => log(m),
+    INPUT: async () => { 
+        const val = await showPrompt("Input");
+        return isNaN(val) || val === "" ? val : Number(val);
+    },
+    APPEND: (L, v) => {
+        if (!Array.isArray(L)) throw "APPEND: first argument must be a list";
+        if (v === undefined) throw "APPEND requires two arguments: APPEND(aList, value)";
+        L.push(v);
+    },
+    CONTAINS: (text, sub) => {
+        if (typeof text !== "string") throw "CONTAINS: first argument must be a string";
+        if (typeof sub !== "string") throw "CONTAINS: second argument must be a string";
+        return text.includes(sub);
+    },
+    INSERT: (L, i, v) => {
+        if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
+        if (i === undefined || v === undefined) throw "INSERT requires three arguments: INSERT(aList, i, value)";
+        if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}. Must be between 1 and ${L.length + 1}`;
+        L.splice(i - 1, 0, v);
+    },
+    REMOVE: (L, i) => {
+        if (!Array.isArray(L)) throw "REMOVE: first argument must be a list";
+        if (i === undefined) throw "REMOVE requires two arguments: REMOVE(aList, i)";
+        if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}. List length is ${L.length}`;
+        L.splice(i - 1, 1);
+    },
+    LENGTH: L => {
+        if (L == null) throw "LENGTH: argument is undefined. Make sure the list exists.";
+        // Added string length support
+        if (typeof L === "string") return L.length; 
+        if (!Array.isArray(L)) throw "LENGTH: argument must be a list or a string";
+        return L.length;
+    },
+    // ********* CORRECTED IDX FUNCTION *********
+    IDX: (L, i, j) => {
+        // Convert 1-based index (i) to 0-based
+        i = Math.round(i) - 1;
 
-    function rewrite(expr) {
-      let result = expr
-        .replace(/[""]/g, '"')
-        .replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=")
-        .replace(/\bAND\b/gi, "&&").replace(/\bOR\b/gi, "||").replace(/\bNOT\b/gi, "!")
-        .replace(/\bMOD\b/gi, "%")
-        .replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, "IDX($1,($2))");
-
-      result = result.replace(/([^<>!=])=([^=])/g, '$1==$2');
-
-      for (const procName in procs) {
-        const regex = new RegExp(`\\b${procName}\\s*\\(`, 'g');
-        result = result.replace(regex, `await ${procName}(`);
-      }
-
-      return result;
-    }
-
-    async function callProc(name, args, callerEnv) {
-      const def = procs[name];
-      if (!def) throw `Unknown procedure '${name}'`;
-      const local = Object.create(callerEnv);
-      for (let i = 0; i < def.params.length; i++) {
-        local[def.params[i]] = i < args.length ? args[i] : undefined;
-      }
-      const result = await execRange(def.start, def.end, local, true);
-      return result !== undefined && result !== null ? result : null;
-    }
-
-    return async function evalExpr(expr) {
-      const e = rewrite(expr);
-      if (!safe.test(e)) throw `Expression contains unsupported characters: ${e}`;
-
-      const scope = {
-        Math,
-        RANDOM: (a, b) => {
-          if (a === undefined || b === undefined) throw "RANDOM requires two arguments: RANDOM(a, b)";
-          return Math.floor(Math.random() * (b - a + 1)) + a;
-        },
-        INPUT: async () => {
-          const val = await showPrompt("Input");
-          return isNaN(val) || val === "" ? val : Number(val);
-        },
-        APPEND: (L, v) => {
-          if (!Array.isArray(L)) throw "APPEND: first argument must be a list";
-          if (v === undefined) throw "APPEND requires two arguments: APPEND(aList, value)";
-          L.push(v);
-        },
-        INSERT: (L, i, v) => {
-          if (!Array.isArray(L)) throw "INSERT: first argument must be a list";
-          if (i === undefined || v === undefined) throw "INSERT requires three arguments: INSERT(aList, i, value)";
-          if (i < 1 || i > L.length + 1) throw `INSERT: invalid index ${i}. Must be between 1 and ${L.length + 1}`;
-          L.splice(i - 1, 0, v);
-        },
-        REMOVE: (L, i) => {
-          if (!Array.isArray(L)) throw "REMOVE: first argument must be a list";
-          if (i === undefined) throw "REMOVE requires two arguments: REMOVE(aList, i)";
-          if (i < 1 || i > L.length) throw `REMOVE: invalid index ${i}. List length is ${L.length}`;
-          L.splice(i - 1, 1);
-        },
-        LENGTH: L => {
-          if (L == null) throw "LENGTH: argument is undefined. Make sure the list exists.";
-          if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
-          return L.length;
-        },
-IDX: (L, i, j) => {
-            // Convert 1-based index (i) to 0-based
-            i = Math.round(i) - 1;
-
-            // --- String Support (Indexing or Substring) ---
-            if (typeof L === "string") {
-                if (j !== undefined) {
-                    // Substring: IDX(string, start, end)
-                    j = Math.round(j); // 1-based end position
-
-                    if (i < 0 || i >= L.length) throw "IDX: start index out of bounds";
-                    
-                    // The 1-based end index (j) must be between 1 and L.length (inclusive)
-                    if (j < 1 || j > L.length) throw "IDX: end index out of bounds"; 
-
-                    if (i >= j) return "";
-                    
-                    // JavaScript's substring uses (0-based start, 0-based *exclusive* end), 
-                    // so passing the 1-based end position (j) is correct.
-                    return L.substring(i, j);
-                } else {
-                    // String Indexing: IDX(string, index)
-                    if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
-                    return L.charAt(i);
-                },
-            }
-
-            // --- List Support (Indexing or Sublist) ---
-            if (!Array.isArray(L)) throw "IDX: first argument must be a list or a string";
-
+        // --- String Support (Indexing or Substring) ---
+        if (typeof L === "string") {
             if (j !== undefined) {
-                // Sublist: IDX(list, start, end)
+                // Substring: IDX(string, start, end)
                 j = Math.round(j); // 1-based end position
 
                 if (i < 0 || i >= L.length) throw "IDX: start index out of bounds";
                 
-                // Correction: The broken code allowed L.length + 1. 
-                // For a sublist, the 1-based end index (j) must be at most L.length.
+                // The 1-based end index (j) must be between 1 and L.length (inclusive)
                 if (j < 1 || j > L.length) throw "IDX: end index out of bounds"; 
+
+                if (i >= j) return "";
                 
-                if (i >= j) return [];
-                
-                // JavaScript's slice uses (0-based start, 0-based *exclusive* end),
+                // JavaScript's substring uses (0-based start, 0-based *exclusive* end), 
                 // so passing the 1-based end position (j) is correct.
-                return L.slice(i, j);
+                return L.substring(i, j);
+            } else {
+                // String Indexing: IDX(string, index)
+                if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+                return L.charAt(i);
             }
-
-            // List Indexing: IDX(list, index)
-            if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
-            return L[i];
-        },
-
-
-	};
-
-      let currentEnv = env;
-      while (currentEnv) {
-        for (const key of Object.getOwnPropertyNames(currentEnv)) {
-          if (!scope.hasOwnProperty(key)) scope[key] = currentEnv[key];
         }
-        const proto = Object.getPrototypeOf(currentEnv);
-        if (!proto || proto === Object.prototype) break;
-        currentEnv = proto;
-      }
 
-      for (const name in procs) {
-        if (!scope.hasOwnProperty(name)) {
-          scope[name] = async (...args) => {
-            const result = await callProc(name, args, env);
-            return result;
-          };
+        // --- List Support (Indexing or Sublist) ---
+        if (!Array.isArray(L)) throw "IDX: first argument must be a list or a string";
+
+        if (j !== undefined) {
+            // Sublist: IDX(list, start, end)
+            j = Math.round(j); // 1-based end position
+
+            if (i < 0 || i >= L.length) throw "IDX: start index out of bounds";
+            
+            // For a sublist, the 1-based end index (j) must be at most L.length.
+            if (j < 1 || j > L.length) throw "IDX: end index out of bounds"; 
+            
+            if (i >= j) return [];
+            
+            // JavaScript's slice uses (0-based start, 0-based *exclusive* end),
+            // so passing the 1-based end position (j) is correct.
+            return L.slice(i, j);
         }
-      }
 
-      const scopeKeys = Object.keys(scope);
-      const scopeValues = Object.values(scope);
+        // List Indexing: IDX(list, index)
+        if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+        return L[i];
+    },
+    // ********* END CORRECTED IDX FUNCTION *********
+    RANDOM: (a, b) => {
+        if (a === undefined || b === undefined) throw "RANDOM requires two arguments: RANDOM(a, b)";
+        a = Math.round(a);
+        b = Math.round(b);
+        if (a > b) [a, b] = [b, a]; // Swap if a > b
+        return Math.floor(Math.random() * (b - a + 1)) + a;
+    },
+    // Aliases to make it work in the JS eval environment
+    MOD: (a, b) => a % b,
+    NOT: b => !b,
+    AND: (b1, b2) => b1 && b2,
+    OR: (b1, b2) => b1 || b2,
+    // Add built-in functions to the ENV for direct access in expressions
+    ...Object.fromEntries(
+        Object.entries({
+            APPEND, CONTAINS, INSERT, REMOVE, LENGTH, IDX, RANDOM, MOD: (a, b) => a % b
+        }).map(([name, fn]) => [name, fn])
+    )
+};
 
-      try {
-        const asyncFn = new Function(...scopeKeys, `return (async function() { return (${e}); })();`);
-        return await asyncFn(...scopeValues);
-      } catch (err) {
-        if (err.message && err.message.includes("is not defined")) {
-          const varMatch = err.message.match(/(\w+) is not defined/);
-          if (varMatch) throw `Variable '${varMatch[1]}' is not defined. Make sure to assign it a value first with: ${varMatch[1]} ← value`;
+// Creates a function to evaluate an expression string
+function makeEval(env, procs) {
+    const scopeKeys = [...Object.keys(env), ...Object.keys(FUNCTIONS)];
+    const scopeValues = [...Object.values(env), ...Object.values(FUNCTIONS)];
+
+    // Add procedures as functions to the scope
+    for (const procName in procs) {
+        scopeKeys.push(procName);
+        // Create an async function wrapper for the procedure call
+        scopeValues.push(async function(...args) {
+            const procDef = procs[procName];
+            if (args.length !== procDef.params.length) {
+                throw `Procedure call error: ${procName} expects ${procDef.params.length} argument(s), but received ${args.length}`;
+            }
+            
+            const newEnv = Object.create(env);
+            procDef.params.forEach((paramName, index) => {
+                newEnv[paramName] = args[index];
+            });
+            
+            // Execute the procedure body
+            const returnValue = await execRange(procDef.start, procDef.end, newEnv, true);
+            
+            // If the procedure ended without a RETURN, return undefined
+            return returnValue;
+        });
+    }
+
+    return async function(e) {
+        // Pre-process expression: replace pseudocode operators and list access
+        e = e.replace(/≠/g, "!=").replace(/≥/g, ">=").replace(/≤/g, "<=");
+        e = e.replace(/←|<-/g, "=");
+        e = e.replace(/MOD/g, "%");
+        e = e.replace(/AND/g, "&&");
+        e = e.replace(/OR/g, "||");
+        e = e.replace(/NOT/g, "!");
+        
+        // Handle list access in expressions: aList[i] -> FUNCTIONS.IDX(aList, i)
+        // This is necessary because in JS eval, array access L[i] is 0-indexed.
+        // The regex looks for [name][index] or [name][start, end]
+        e = e.replace(/([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/g, (match, listName, indices) => {
+            const parts = indices.split(',').map(s => s.trim());
+            if (parts.length === 1) {
+                return `FUNCTIONS.IDX(${listName}, ${parts[0]})`;
+            } else if (parts.length === 2) {
+                return `FUNCTIONS.IDX(${listName}, ${parts[0]}, ${parts[1]})`;
+            }
+            throw new Error(`Invalid list/string index or substring/sublist syntax: ${match}`);
+        });
+        
+        // Handle array literal creation: [1, 2, 3]
+        e = e.replace(/\[\s*([^\]]*)\s*\]/g, (match, content) => {
+            if (content.trim() === '') return '[]';
+            // Replace internal assignments/operators before evaluation
+            let replacedContent = content.replace(/←|<-/g, "=");
+            return `[${replacedContent}]`;
+        });
+        
+        // Handle string literals to preserve them exactly
+        e = e.replace(/"/g, '`');
+        
+        try {
+            const asyncFn = new Function(...scopeKeys, `return (async function() { return (${e}); })();`);
+            return await asyncFn(...scopeValues);
+        } catch (err) {
+            if (err.message && err.message.includes("is not defined")) {
+                const varMatch = err.message.match(/(\w+) is not defined/);
+                if (varMatch) throw `Variable '${varMatch[1]}' is not defined. Make sure to assign it a value first with: ${varMatch[1]} ← value at line ${LINES[i].idx + 1}`;
+            }
+            throw err.message || err;
         }
-        throw err.message || err;
-      }
     };
-  }
+}
 
-  async function execRange(start, end, env, insideProc = false) {
+
+async function execRange(start, end, env, insideProc = false) {
     const evalExpr = makeEval(env, PROCS);
     let i = start;
-
+    
     while (i < end) {
-      if (halted) return null;
-      const { s, idx } = LINES[i];
-
-      if (!s || s === "{" || s === "}") { i++; continue; }
-
-      if (!insideProc && /^PROCEDURE\b/i.test(s)) {
-        const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
-        const name = m[1];
-        const def = PROCS[name];
-        i = def.end + 1;
-        continue;
-      }
-
-      if (/^RETURN\b/i.test(s)) {
-        if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}. RETURN can only be used inside a PROCEDURE.`;
-        const m = s.match(/^RETURN\s*\((.*)\)/i);
-        if (!m) throw `Invalid RETURN syntax at line ${idx + 1}. Use: RETURN(expression)`;
-        const returnVal = m[1].trim() ? await evalExpr(m[1]) : null;
-        return returnVal;
-      }
-
-      if (/^DISPLAY\s*\(/i.test(s)) {
-        const m = s.match(/^DISPLAY\s*\((.*)\)/i);
-        if (!m) throw `Invalid DISPLAY syntax at line ${idx + 1}. Use: DISPLAY(expression)`;
-        const val = await evalExpr(m[1]);
-        log(val);
-        i++;
-        continue;
-      }
-
-      if (/^[A-Za-z_]\w*\s*(←|<-)\s*(.*)$/.test(s)) {
-        const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
-        const varName = m[1];
-        const expr = m[2];
-        if (!expr.trim()) throw `Missing value in assignment at line ${idx + 1}. Use: ${varName} ← value`;
-        const val = await evalExpr(expr);
-
-        let targetEnv = env;
-        let found = false;
-        while (targetEnv) {
-          if (Object.prototype.hasOwnProperty.call(targetEnv, varName)) {
-            targetEnv[varName] = val;
-            found = true;
-            break;
-          }
-          const proto = Object.getPrototypeOf(targetEnv);
-          if (!proto || proto === Object.prototype) break;
-          targetEnv = proto;
-        }
-
-        if (!found) env[varName] = val;
-        i++;
-        continue;
-      }
-
-      if (/^[A-Za-z_]\w*\s*\[\s*.*\s*\]\s*(←|<-)\s*(.*)$/.test(s)) {
-        const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
-        const listName = m[1];
-        const indexExpr = m[2];
-        const valueExpr = m[3];
-
-        const list = await evalExpr(listName);
-        const index = await evalExpr(indexExpr);
-        const value = await evalExpr(valueExpr);
-
-        if (!Array.isArray(list)) throw `${listName} is not a list at line ${idx + 1}`;
-        if (index < 1 || index > list.length) throw `Index ${index} out of bounds at line ${idx + 1}. List length is ${list.length}. Remember: lists are 1-indexed.`;
-
-        list[index - 1] = value;
-        i++;
-        continue;
-      }
-
-      if (/^IF\s*\(/i.test(s)) {
-        const m = s.match(/^IF\s*\((.*)\)/i);
-        if (!m) throw `Invalid IF syntax at line ${idx + 1}. Use: IF(condition)`;
-        const cond = await evalExpr(m[1]);
-
-        i++;
-        if (i >= end || LINES[i].s !== "{") throw `IF at line ${idx + 1} must be followed by {`;
-
-        const blockStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < end && depth > 0) {
-          if (LINES[i].s === "{") depth++;
-          else if (LINES[i].s === "}") depth--;
-          i++;
-        }
-        const blockEnd = i - 1;
-
-        if (cond) {
-          const result = await execRange(blockStart, blockEnd, env, insideProc);
-          if (insideProc && result !== undefined && result !== null) return result;
-
-          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+        if (halted) return null;
+        
+        const { s, idx } = LINES[i];
+        
+        if (!s || s === "{" || s === "}") {
             i++;
-            if (i < end && LINES[i].s === "{") {
-              depth = 1;
-              i++;
-              while (i < end && depth > 0) {
+            continue;
+        }
+        
+        // Skip procedure definitions when not executing a procedure
+        if (!insideProc && /^PROCEDURE\b/i.test(s)) {
+            const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)/i);
+            const name = m[1];
+            const def = PROCS[name];
+            i = def.end + 1;
+            continue;
+        }
+        
+        // RETURN
+        if (/^RETURN\b/i.test(s)) {
+            if (!insideProc) throw `RETURN outside procedure at line ${idx + 1}. RETURN can only be used inside a PROCEDURE.`;
+            const m = s.match(/^RETURN\s*\((.*)\)/i);
+            if (!m) throw `Invalid RETURN syntax at line ${idx + 1}. Use: RETURN(expression)`;
+            const returnVal = m[1].trim() ? await evalExpr(m[1]) : undefined;
+            return returnVal;
+        }
+
+        // DISPLAY
+        if (/^DISPLAY\s*\(/i.test(s)) {
+            const m = s.match(/^DISPLAY\s*\((.*)\)/i);
+            if (!m) throw `Invalid DISPLAY syntax at line ${idx + 1}. Use: DISPLAY(expression)`;
+            const output = await evalExpr(m[1]);
+            FUNCTIONS.DISPLAY(output);
+            i++;
+            continue;
+        }
+        
+        // Procedure Call (as a standalone statement)
+        if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
+             try {
+                await evalExpr(s);
+             } catch (e) {
+                // Ignore return values, but propagate other errors
+                if (!(e instanceof Error && e.message === "Procedure call completed.")) {
+                    throw e;
+                }
+             }
+             i++;
+             continue;
+        }
+        
+        // Assignment to variable: var ← expression
+        const assignMatch = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
+        if (assignMatch) {
+            const varName = assignMatch[1];
+            const expr = assignMatch[2];
+            
+            // Check if it's a list assignment first: listName[i] ← value
+            const listAssignMatch = varName.match(/^([A-Za-z_]\w*)\s*\[\s*([^\]]+)\s*\]/);
+            if (listAssignMatch) {
+                const listName = listAssignMatch[1];
+                const indexExpr = listAssignMatch[2];
+
+                if (!env[listName]) throw `Variable '${listName}' is not defined at line ${idx + 1}.`;
+                const list = env[listName];
+                if (!Array.isArray(list) && typeof list !== 'string') throw `Variable '${listName}' at line ${idx + 1} is not a list or string and cannot be indexed.`;
+
+                // Evaluate index and value separately to catch errors related to the variable/list being undefined/invalid.
+                const index = await evalExpr(indexExpr);
+                const value = await evalExpr(expr);
+                
+                if (typeof list === 'string') {
+                    // String assignment is not supported in the interpreter to match typical pseudocode (strings are immutable).
+                    throw `String assignment error at line ${idx + 1}: Strings are immutable and cannot be assigned to an index.`;
+                }
+
+                if (index < 1 || index > list.length) throw `List index out of bounds at line ${idx + 1}. List length is ${list.length}. Remember: lists are 1-indexed.`;
+                list[index - 1] = value;
+                i++;
+                continue;
+            }
+            
+            // Regular variable assignment
+            const value = await evalExpr(expr);
+            env[varName] = value;
+            i++;
+            continue;
+        }
+        
+        // IF
+        if (/^IF\s*\(/i.test(s)) {
+            const m = s.match(/^IF\s*\((.*)\)/i);
+            if (!m) throw `Invalid IF syntax at line ${idx + 1}. Use: IF(condition)`;
+            
+            const cond = await evalExpr(m[1]);
+            i++;
+            if (i >= end || LINES[i].s !== "{") throw `IF at line ${idx + 1} must be followed by {`;
+            
+            const blockStart = i + 1;
+            let depth = 1;
+            i++;
+            while (i < end && depth > 0) {
                 if (LINES[i].s === "{") depth++;
                 else if (LINES[i].s === "}") depth--;
                 i++;
-              }
             }
-          }
-        } else {
-          if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+            const blockEnd = i - 1;
+            
+            if (cond) {
+                const result = await execRange(blockStart, blockEnd, env, insideProc);
+                if (insideProc && result !== undefined && result !== null) return result;
+                
+                // Skip ELSE block if executed
+                if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+                    i++;
+                    if (i < end && LINES[i].s === "{") {
+                        depth = 1;
+                        i++;
+                        while (i < end && depth > 0) {
+                            if (LINES[i].s === "{") depth++;
+                            else if (LINES[i].s === "}") depth--;
+                            i++;
+                        }
+                    }
+                }
+            } else {
+                // Skip IF block
+                if (i < end && /^ELSE\b/i.test(LINES[i].s)) {
+                    i++;
+                    if (i >= end || LINES[i].s !== "{") throw `ELSE at line ${idx + 1} must be followed by {`;
+                    
+                    const elseStart = i + 1;
+                    depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (LINES[i].s === "{") depth++;
+                        else if (LINES[i].s === "}") depth--;
+                        i++;
+                    }
+                    const elseEnd = i - 1;
+                    
+                    const result = await execRange(elseStart, elseEnd, env, insideProc);
+                    if (insideProc && result !== undefined && result !== null) return result;
+                }
+            }
+            
+            continue;
+        }
+        
+        // REPEAT n TIMES
+        if (/^REPEAT\s+.+\s+TIMES/i.test(s)) {
+            const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
+            if (!m) throw `Invalid REPEAT TIMES syntax at line ${idx + 1}. Use: REPEAT n TIMES`;
+            
+            const countExpr = m[1];
+            const n = Math.round(await evalExpr(countExpr));
+            if (typeof n !== 'number' || isNaN(n) || n < 0) throw `REPEAT count must be a non-negative number at line ${idx + 1}`;
+            
             i++;
-            if (i >= end || LINES[i].s !== "{") throw `ELSE at line ${LINES[i - 1].idx + 1} must be followed by {`;
-
-            const elseStart = i + 1;
-            depth = 1;
+            if (i >= end || LINES[i].s !== "{") throw `REPEAT TIMES at line ${idx + 1} must be followed by {`;
+            
+            const blockStart = i + 1;
+            let depth = 1;
             i++;
             while (i < end && depth > 0) {
-              if (LINES[i].s === "{") depth++;
-              else if (LINES[i].s === "}") depth--;
-              i++;
+                if (LINES[i].s === "{") depth++;
+                else if (LINES[i].s === "}") depth--;
+                i++;
             }
-            const elseEnd = i - 1;
-
-            const result = await execRange(elseStart, elseEnd, env, insideProc);
-            if (insideProc && result !== undefined && result !== null) return result;
-          }
-        }
-        continue;
-      }
-
-      if (/^REPEAT\s+(\d+|\(.*?\)|\S+)\s+TIMES/i.test(s)) {
-        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
-        const countExpr = m[1];
-        const n = await evalExpr(countExpr);
-
-        if (typeof n !== 'number' || n < 0) throw `REPEAT TIMES at line ${idx + 1}: count must be a non-negative number, got ${n}`;
-
-        i++;
-        if (i >= end || LINES[i].s !== "{") throw `REPEAT TIMES at line ${idx + 1} must be followed by {`;
-
-        const blockStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < end && depth > 0) {
-          if (LINES[i].s === "{") depth++;
-          else if (LINES[i].s === "}") depth--;
-          i++;
-        }
-        const blockEnd = i - 1;
-
-        for (let rep = 0; rep < n; rep++) {
-          if (halted) return null;
-          const result = await execRange(blockStart, blockEnd, env, insideProc);
-          if (result !== undefined && result !== null && insideProc) return result;
-        }
-        continue;
-      }
-
-      if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
-        const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
-        if (!m) throw `Invalid REPEAT UNTIL syntax at line ${idx + 1}. Use: REPEAT UNTIL(condition)`;
-        const condExpr = m[1];
-
-        i++;
-        if (i >= end || LINES[i].s !== "{") throw `REPEAT UNTIL at line ${idx + 1} must be followed by {`;
-
-        const blockStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < end && depth > 0) {
-          if (LINES[i].s === "{") depth++;
-          else if (LINES[i].s === "}") depth--;
-          i++;
-        }
-        const blockEnd = i - 1;
-
-        while (true) {
-          if (halted) return null;
-          const result = await execRange(blockStart, blockEnd, env, insideProc);
-          if (result !== undefined && result !== null && insideProc) return result;
-
-          const cond = await evalExpr(condExpr);
-          if (cond) break;
-        }
-        continue;
-      }
-
-      if (/^FOR\s+EACH\s+/i.test(s)) {
-        const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
-        if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}. Use: FOR EACH item IN aList`;
-        const itemVar = m[1];
-        const listExpr = m[2];
-
-        const list = await evalExpr(listExpr);
-        if (!Array.isArray(list)) throw `FOR EACH at line ${idx + 1}: ${listExpr} is not a list`;
-
-        i++;
-        if (i >= end || LINES[i].s !== "{") throw `FOR EACH at line ${idx + 1} must be followed by {`;
-
-        const blockStart = i + 1;
-        let depth = 1;
-        i++;
-        while (i < end && depth > 0) {
-          if (LINES[i].s === "{") depth++;
-          else if (LINES[i].s === "}") depth--;
-          i++;
-        }
-        const blockEnd = i - 1;
-
-        for (const item of list) {
-          if (halted) return null;
-          env[itemVar] = item;
-          const result = await execRange(blockStart, blockEnd, env, insideProc);
-          if (result !== undefined && result !== null && insideProc) return result;
+            const blockEnd = i - 1;
+            
+            for (let rep = 0; rep < n; rep++) {
+                if (halted) return null;
+                const result = await execRange(blockStart, blockEnd, env, insideProc);
+                if (result !== undefined && result !== null && insideProc) return result;
+            }
+            
+            continue;
         }
 
-        delete env[itemVar];
-        continue;
-      }
-
-      if (/^(APPEND|INSERT|REMOVE)\s*\(/i.test(s)) {
-        await evalExpr(s);
-        i++;
-        continue;
-      }
-
-      if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
-        const m = s.match(/^([A-Za-z_]\w*)/);
-        if (m && PROCS[m[1]]) {
-          await evalExpr(s);
-          i++;
-          continue;
+        // REPEAT UNTIL
+        if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
+            const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
+            if (!m) throw `Invalid REPEAT UNTIL syntax at line ${idx + 1}. Use: REPEAT UNTIL(condition)`;
+            
+            const condExpr = m[1];
+            
+            i++;
+            if (i >= end || LINES[i].s !== "{") throw `REPEAT UNTIL at line ${idx + 1} must be followed by {`;
+            
+            const blockStart = i + 1;
+            let depth = 1;
+            i++;
+            while (i < end && depth > 0) {
+                if (LINES[i].s === "{") depth++;
+                else if (LINES[i].s === "}") depth--;
+                i++;
+            }
+            const blockEnd = i - 1;
+            
+            while (true) {
+                if (halted) return null;
+                const result = await execRange(blockStart, blockEnd, env, insideProc);
+                if (result !== undefined && result !== null && insideProc) return result;
+                
+                const cond = await evalExpr(condExpr);
+                if (cond) break;
+            }
+            
+            continue;
         }
-      }
+        
+        // FOR EACH
+        if (/^FOR\s+EACH\s+/i.test(s)) {
+            const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
+            if (!m) throw `Invalid FOR EACH syntax at line ${idx + 1}. Use: FOR EACH item IN aList`;
+            
+            const itemVar = m[1];
+            const listExpr = m[2];
+            
+            const list = await evalExpr(listExpr);
+            
+            if (!Array.isArray(list) && typeof list !== 'string') throw `FOR EACH requires a list or string, but received ${typeof list} at line ${idx + 1}.`;
+            
+            i++;
+            if (i >= end || LINES[i].s !== "{") throw `FOR EACH at line ${idx + 1} must be followed by {`;
+            
+            const blockStart = i + 1;
+            let depth = 1;
+            i++;
+            while (i < end && depth > 0) {
+                if (LINES[i].s === "{") depth++;
+                else if (LINES[i].s === "}") depth--;
+                i++;
+            }
+            const blockEnd = i - 1;
+            
+            for (const item of list) {
+                if (halted) return null;
+                
+                // Create a temporary environment for the loop body
+                const loopEnv = Object.create(env);
+                loopEnv[itemVar] = item;
+                
+                const result = await execRange(blockStart, blockEnd, loopEnv, insideProc);
+                if (result !== undefined && result !== null && insideProc) return result;
+            }
+            
+            continue;
+        }
 
-      throw `Unknown statement at line ${idx + 1}: "${s}"`;
+        // Unhandled line. Could be a non-executable line (e.g., an empty line or comment line that was missed)
+        // or a syntax error we didn't catch earlier.
+        throw `Syntax error or unhandled command at line ${idx + 1}: ${s}`;
     }
-    return null;
-  }
+    
+    return undefined; // No return value for non-procedure blocks
+}
 
-  async function run(src) {
+async function run(src) {
     halted = false;
     logEl.innerHTML = "";
     setStatus("Parsing…", "running");
     
     try {
-      LINES = preprocess(src);
-      validateBraces(LINES);
-      PROCS = parseProcedures(LINES);
-      ENV = Object.create(null);
+        LINES = preprocess(src);
+        validateBraces(LINES);
+        PROCS = parseProcedures(LINES);
+        ENV = Object.create(null);
     } catch (e) {
-      err("Parse Error: " + e);
-      detectAndShowHelp(String(e), "");
-      setStatus("Parse Error", "error");
-      return;
+        err("Parse Error: " + e);
+        detectAndShowHelp(String(e), "");
+        setStatus("Parse Error", "error");
+        return;
     }
 
     setStatus("Running…", "running");
     try {
-      await execRange(0, LINES.length, ENV, false);
-      setStatus("Finished");
-      sys("✓ Program completed successfully");
+        await execRange(0, LINES.length, ENV, false);
+        setStatus("Finished");
+        sys("✓ Program completed successfully");
     } catch (e) {
-      err("Runtime Error: " + e);
-      const lineMatch = String(e).match(/line\s*(\d+)/i);
-      const lineNum = lineMatch ? parseInt(lineMatch[1]) - 1 : -1;
-      const lineContent = lineNum >= 0 && LINES[lineNum] ? LINES[lineNum].s : "";
-      detectAndShowHelp(String(e), lineContent);
-      setStatus("Error", "error");
+        err("Runtime Error: " + e);
+        const lineMatch = String(e).match(/line\s*(\d+)/i);
+        const lineNum = lineMatch ? parseInt(lineMatch[1]) - 1 : -1;
+        const lineContent = lineNum >= 0 && LINES[lineNum] ? LINES[lineNum].s : "";
+        detectAndShowHelp(String(e), lineContent);
+        setStatus("Error", "error");
+    } finally {
+        hidePrompt();
+    }
+}
+
+
+// ===== BLOCKS RENDERER - Authentic APCSP Style =====
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderVal(expr) {
+  return `<span class="block-val">${escapeHtml(expr)}</span>`;
+}
+
+function renderCond(expr) {
+  return `<span class="block-cond">${escapeHtml(expr)}</span>`;
+}
+
+function renderBlock(content, isDark = false) {
+  return `<span class="block-expr${isDark ? ' dark' : ''}">${content}</span>`;
+}
+
+function renderExpression(expr) {
+  // Simple check for boolean/relational operators
+  if (expr.match(/=|≠|>=|≤|>|<|AND|OR|NOT/i)) {
+    return renderCond(expr);
+  }
+  return renderVal(expr);
+}
+
+function renderBlocks(ast) {
+  let html = '';
+  for (const block of ast) {
+    switch (block.type) {
+      case 'assign':
+        html += `<div class="block-statement"><span class="bl">${renderVal(block.varName)} <span class="block-arrow">←</span> ${renderExpression(block.expr)}</span></div>`;
+        break;
+      case 'list-assign':
+        html += `<div class="block-statement"><span class="bl">${renderVal(block.listName)}[${renderVal(block.index)}] <span class="block-arrow">←</span> ${renderExpression(block.value)}</span></div>`;
+        break;
+      case 'display':
+        html += `<div class="block-statement"><span class="bl"><span class="block-keyword">DISPLAY</span>(${renderExpression(block.expr)})</span></div>`;
+        break;
+      case 'call':
+        html += `<div class="block-statement"><span class="bl">${escapeHtml(block.expr)}</span></div>`;
+        break;
+      case 'return':
+        html += `<div class="block-statement"><span class="bl"><span class="block-keyword">RETURN</span>(${renderExpression(block.expr)})</span></div>`;
+        break;
+      case 'if':
+        html += `<div class="block-control"><div class="block-control-header"><span class="block-keyword">IF</span>(${renderCond(block.condition)})</div><div class="block-control-body">${renderBlocks(block.body)}</div>`;
+        if (block.elseBody) {
+          html += `<div class="block-else"><span class="block-keyword">ELSE</span></div><div class="block-control-body">${renderBlocks(block.elseBody)}</div>`;
+        }
+        html += `</div>`;
+        break;
+      case 'repeat-times':
+        html += `<div class="block-control"><div class="block-control-header"><span class="block-keyword">REPEAT</span> ${renderVal(block.count)} <span class="block-keyword">TIMES</span></div><div class="block-control-body">${renderBlocks(block.body)}</div></div>`;
+        break;
+      case 'repeat-until':
+        html += `<div class="block-control"><div class="block-control-header"><span class="block-keyword">REPEAT UNTIL</span>(${renderCond(block.condition)})</div><div class="block-control-body">${renderBlocks(block.body)}</div></div>`;
+        break;
+      case 'for-each':
+        html += `<div class="block-control"><div class="block-control-header"><span class="block-keyword">FOR EACH</span> ${renderVal(block.itemVar)} <span class="block-keyword">IN</span> ${renderVal(block.listExpr)}</div><div class="block-control-body">${renderBlocks(block.body)}</div></div>`;
+        break;
+      case 'procedure':
+        html += `<div class="block-procedure"><div class="block-procedure-header"><span class="block-keyword">PROCEDURE</span> ${escapeHtml(block.name)}(${block.params.map(p => renderVal(p)).join(', ')})</div><div class="block-procedure-body">${renderBlocks(block.body)}</div></div>`;
+        break;
+      case 'unknown':
+        if (block.text) {
+             html += `<div class="block-statement"><span class="bl" style="color:#B5514D; background-color:#ffeded;">${escapeHtml(block.text)}</span></div>`;
+        }
+        break;
+      default:
+        // Ignore { and }
+        break;
     }
   }
+  return html;
+}
 
-  // ===== BLOCKS RENDERER - Authentic APCSP Style =====
-  function escapeHtml(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function renderVal(expr) {
-    return `<span class="block-val">${escapeHtml(expr)}</span>`;
-  }
-
-  function renderCond(expr) {
-    return `<span class="block-cond">${escapeHtml(expr)}</span>`;
-  }
-
-  function renderBlock(content, isDark = false) {
-    return `<span class="block-expr${isDark ? ' dark' : ''}">${content}</span>`;
-  }
-
-  function renderExpression(expr) {
-    expr = expr.trim();
-    if (!expr) return '';
-    
-    // Handle string literals - use val style (square)
-    if (/^["'"].*["'"]$/.test(expr)) {
-      return renderVal(expr);
-    }
-    
-    // Handle lists - use val style (square)
-    if (/^\[.*\]$/.test(expr)) {
-      return renderVal(expr);
-    }
-    
-    // Handle function calls - rounded block with val inside
-    const funcMatch = expr.match(/^([A-Z_]+)\s*\((.*)\)$/i);
-    if (funcMatch) {
-      const funcName = funcMatch[1].toUpperCase();
-      const args = funcMatch[2].trim();
-      if (args) {
-        return renderBlock(`${funcName} ${renderVal(args)}`);
-      }
-      return renderBlock(funcName);
-    }
-    
-    // Handle list indexing - listName[index]
-    const indexMatch = expr.match(/^([A-Za-z_]\w*)\s*\[\s*(.+)\s*\]$/);
-    if (indexMatch) {
-      return renderBlock(`${escapeHtml(indexMatch[1])}${renderVal(indexMatch[2])}`);
-    }
-    
-    // Simple variable or number
-    return escapeHtml(expr);
-  }
-
-  function parseBlocksAST(lines, start, end) {
+// Simple AST Parser for Blocks Renderer (only covers structure, not full semantics)
+function parseBlocksAST(lines, start, end) {
     const blocks = [];
     let i = start;
-    
+
     while (i < end) {
-      const { s, idx } = lines[i];
-      
-      if (!s || s === "{" || s === "}") {
-        i++;
-        continue;
-      }
-      
-      // PROCEDURE
-      if (/^PROCEDURE\b/i.test(s)) {
-        const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
-        if (m) {
-          const name = m[1];
-          const params = m[2];
-          i++;
-          if (i < end && lines[i].s === "{") {
-            const bodyStart = i + 1;
-            let depth = 1;
-            i++;
-            while (i < end && depth > 0) {
-              if (lines[i].s === "{") depth++;
-              else if (lines[i].s === "}") depth--;
-              i++;
-            }
-            const bodyEnd = i - 1;
-            blocks.push({
-              type: 'procedure',
-              name,
-              params,
-              body: parseBlocksAST(lines, bodyStart, bodyEnd)
-            });
-          }
-        } else {
-          i++;
-        }
-        continue;
-      }
-      
-      // IF
-      if (/^IF\s*\(/i.test(s)) {
-        const m = s.match(/^IF\s*\((.*)\)/i);
-        if (m) {
-          const condition = m[1];
-          i++;
-          let ifBody = [];
-          let elseBody = null;
-          
-          if (i < end && lines[i].s === "{") {
-            const bodyStart = i + 1;
-            let depth = 1;
-            i++;
-            while (i < end && depth > 0) {
-              if (lines[i].s === "{") depth++;
-              else if (lines[i].s === "}") depth--;
-              i++;
-            }
-            const bodyEnd = i - 1;
-            ifBody = parseBlocksAST(lines, bodyStart, bodyEnd);
-          }
-          
-          // Check for ELSE
-          if (i < end && /^ELSE\b/i.test(lines[i].s)) {
-            i++;
-            if (i < end && lines[i].s === "{") {
-              const elseStart = i + 1;
-              let depth = 1;
-              i++;
-              while (i < end && depth > 0) {
-                if (lines[i].s === "{") depth++;
-                else if (lines[i].s === "}") depth--;
+        const { s } = lines[i];
+
+        // Procedure
+        if (/^PROCEDURE\b/i.test(s)) {
+            const m = s.match(/^PROCEDURE\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/i);
+            if (m) {
+                const name = m[1];
+                const params = m[2].trim() ? m[2].split(",").map(s => s.trim()) : [];
+                
                 i++;
-              }
-              const elseEnd = i - 1;
-              elseBody = parseBlocksAST(lines, elseStart, elseEnd);
+                if (i < end && lines[i].s === "{") {
+                    const bodyStart = i + 1;
+                    let depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (lines[i].s === "{") depth++;
+                        else if (lines[i].s === "}") depth--;
+                        i++;
+                    }
+                    const bodyEnd = i - 1;
+                    blocks.push({ 
+                        type: 'procedure', 
+                        name, 
+                        params, 
+                        body: parseBlocksAST(lines, bodyStart, bodyEnd) 
+                    });
+                }
+            } else {
+                i++;
             }
-          }
-          
-          blocks.push({
-            type: 'if',
-            condition,
-            body: ifBody,
-            elseBody
-          });
-        } else {
-          i++;
+            continue;
         }
-        continue;
-      }
-      
-      // REPEAT n TIMES
-      if (/^REPEAT\s+.+\s+TIMES/i.test(s)) {
-        const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
-        if (m) {
-          const count = m[1];
-          i++;
-          if (i < end && lines[i].s === "{") {
-            const bodyStart = i + 1;
-            let depth = 1;
+
+        // IF
+        if (/^IF\s*\(/i.test(s)) {
+            const m = s.match(/^IF\s*\((.*)\)/i);
+            if (m) {
+                const condition = m[1];
+                i++;
+                let ifBody = [];
+                let elseBody = null;
+
+                if (i < end && lines[i].s === "{") {
+                    const bodyStart = i + 1;
+                    let depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (lines[i].s === "{") depth++;
+                        else if (lines[i].s === "}") depth--;
+                        i++;
+                    }
+                    const bodyEnd = i - 1;
+                    ifBody = parseBlocksAST(lines, bodyStart, bodyEnd);
+                }
+                
+                // Check for ELSE
+                if (i < end && /^ELSE\b/i.test(lines[i].s)) {
+                    i++;
+                    if (i < end && lines[i].s === "{") {
+                        const elseStart = i + 1;
+                        let depth = 1;
+                        i++;
+                        while (i < end && depth > 0) {
+                            if (lines[i].s === "{") depth++;
+                            else if (lines[i].s === "}") depth--;
+                            i++;
+                        }
+                        const elseEnd = i - 1;
+                        elseBody = parseBlocksAST(lines, elseStart, elseEnd);
+                    }
+                }
+
+                blocks.push({ type: 'if', condition, body: ifBody, elseBody });
+            } else {
+                i++;
+            }
+            continue;
+        }
+
+        // REPEAT n TIMES
+        if (/^REPEAT\s+.+\s+TIMES/i.test(s)) {
+            const m = s.match(/^REPEAT\s+(.*?)\s+TIMES/i);
+            if (m) {
+                const count = m[1];
+                i++;
+                if (i < end && lines[i].s === "{") {
+                    const bodyStart = i + 1;
+                    let depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (lines[i].s === "{") depth++;
+                        else if (lines[i].s === "}") depth--;
+                        i++;
+                    }
+                    const bodyEnd = i - 1;
+                    blocks.push({ type: 'repeat-times', count, body: parseBlocksAST(lines, bodyStart, bodyEnd) });
+                }
+            } else {
+                i++;
+            }
+            continue;
+        }
+
+        // REPEAT UNTIL
+        if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
+            const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
+            if (m) {
+                const condition = m[1];
+                i++;
+                if (i < end && lines[i].s === "{") {
+                    const bodyStart = i + 1;
+                    let depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (lines[i].s === "{") depth++;
+                        else if (lines[i].s === "}") depth--;
+                        i++;
+                    }
+                    const bodyEnd = i - 1;
+                    blocks.push({ type: 'repeat-until', condition, body: parseBlocksAST(lines, bodyStart, bodyEnd) });
+                }
+            } else {
+                i++;
+            }
+            continue;
+        }
+        
+        // FOR EACH
+        if (/^FOR\s+EACH\s+/i.test(s)) {
+            const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
+            if (m) {
+                const itemVar = m[1];
+                const listExpr = m[2];
+                i++;
+                if (i < end && lines[i].s === "{") {
+                    const bodyStart = i + 1;
+                    let depth = 1;
+                    i++;
+                    while (i < end && depth > 0) {
+                        if (lines[i].s === "{") depth++;
+                        else if (lines[i].s === "}") depth--;
+                        i++;
+                    }
+                    const bodyEnd = i - 1;
+                    blocks.push({ type: 'for-each', itemVar, listExpr, body: parseBlocksAST(lines, bodyStart, bodyEnd) });
+                }
+            } else {
+                i++;
+            }
+            continue;
+        }
+
+        // DISPLAY
+        if (/^DISPLAY\s*\(/i.test(s)) {
+            const m = s.match(/^DISPLAY\s*\((.*)\)/i);
+            if (m) {
+                blocks.push({ type: 'display', expr: m[1] });
+            }
             i++;
-            while (i < end && depth > 0) {
-              if (lines[i].s === "{") depth++;
-              else if (lines[i].s === "}") depth--;
-              i++;
-            }
-            const bodyEnd = i - 1;
-            blocks.push({
-              type: 'repeat-times',
-              count,
-              body: parseBlocksAST(lines, bodyStart, bodyEnd)
-            });
-          }
-        } else {
-          i++;
+            continue;
         }
-        continue;
-      }
-      
-      // REPEAT UNTIL
-      if (/^REPEAT\s+UNTIL\s*\(/i.test(s)) {
-        const m = s.match(/^REPEAT\s+UNTIL\s*\((.*)\)/i);
-        if (m) {
-          const condition = m[1];
-          i++;
-          if (i < end && lines[i].s === "{") {
-            const bodyStart = i + 1;
-            let depth = 1;
+
+        // RETURN
+        if (/^RETURN\s*\(/i.test(s)) {
+            const m = s.match(/^RETURN\s*\((.*)\)/i);
+            if (m) {
+                blocks.push({ type: 'return', expr: m[1] });
+            }
             i++;
-            while (i < end && depth > 0) {
-              if (lines[i].s === "{") depth++;
-              else if (lines[i].s === "}") depth--;
-              i++;
-            }
-            const bodyEnd = i - 1;
-            blocks.push({
-              type: 'repeat-until',
-              condition,
-              body: parseBlocksAST(lines, bodyStart, bodyEnd)
-            });
-          }
-        } else {
-          i++;
+            continue;
         }
-        continue;
-      }
-      
-      // FOR EACH
-      if (/^FOR\s+EACH\s+/i.test(s)) {
-        const m = s.match(/^FOR\s+EACH\s+(\w+)\s+IN\s+(.+)/i);
-        if (m) {
-          const itemVar = m[1];
-          const listExpr = m[2];
-          i++;
-          if (i < end && lines[i].s === "{") {
-            const bodyStart = i + 1;
-            let depth = 1;
+
+        // Assignment with list index: list[index] ← value
+        if (/^[A-Za-z_]\w*\s*\[.*\]\s*(←|<-)/.test(s)) {
+            const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
+            if (m) {
+                blocks.push({ type: 'list-assign', listName: m[1], index: m[2], value: m[3] });
+            }
             i++;
-            while (i < end && depth > 0) {
-              if (lines[i].s === "{") depth++;
-              else if (lines[i].s === "}") depth--;
-              i++;
+            continue;
+        }
+
+        // Assignment: var ← expression
+        if (/^[A-Za-z_]\w*\s*(←|<-)/.test(s)) {
+            const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
+            if (m) {
+                blocks.push({ type: 'assign', varName: m[1], expr: m[2] });
             }
-            const bodyEnd = i - 1;
-            blocks.push({
-              type: 'for-each',
-              itemVar,
-              listExpr,
-              body: parseBlocksAST(lines, bodyStart, bodyEnd)
-            });
-          }
-        } else {
-          i++;
+            i++;
+            continue;
         }
-        continue;
-      }
-      
-      // DISPLAY
-      if (/^DISPLAY\s*\(/i.test(s)) {
-        const m = s.match(/^DISPLAY\s*\((.*)\)/i);
-        if (m) {
-          blocks.push({ type: 'display', expr: m[1] });
+
+        // Procedure call or other function
+        if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
+            blocks.push({ type: 'call', expr: s });
+            i++;
+            continue;
+        }
+
+        // Unknown - just show as text
+        if (s) {
+            blocks.push({ type: 'unknown', text: s });
         }
         i++;
-        continue;
-      }
-      
-      // RETURN
-      if (/^RETURN\s*\(/i.test(s)) {
-        const m = s.match(/^RETURN\s*\((.*)\)/i);
-        if (m) {
-          blocks.push({ type: 'return', expr: m[1] });
-        }
-        i++;
-        continue;
-      }
-      
-      // Assignment with list index
-      if (/^[A-Za-z_]\w*\s*\[.*\]\s*(←|<-)/.test(s)) {
-        const m = s.match(/^([A-Za-z_]\w*)\s*\[\s*(.*?)\s*\]\s*(?:←|<-)\s*(.*)$/);
-        if (m) {
-          blocks.push({ type: 'list-assign', listName: m[1], index: m[2], value: m[3] });
-        }
-        i++;
-        continue;
-      }
-      
-      // Assignment
-      if (/^[A-Za-z_]\w*\s*(←|<-)/.test(s)) {
-        const m = s.match(/^([A-Za-z_]\w*)\s*(?:←|<-)\s*(.*)$/);
-        if (m) {
-          blocks.push({ type: 'assign', varName: m[1], expr: m[2] });
-        }
-        i++;
-        continue;
-      }
-      
-      // Procedure call or other function
-      if (/^[A-Za-z_]\w*\s*\(/i.test(s)) {
-        blocks.push({ type: 'call', expr: s });
-        i++;
-        continue;
-      }
-      
-      // Unknown - just show as text
-      blocks.push({ type: 'unknown', text: s });
-      i++;
     }
-    
+
     return blocks;
+}
+
+function renderBlocksModal() {
+  blocksBody.innerHTML = '';
+  try {
+    const lines = preprocess(editor.value);
+    const ast = parseBlocksAST(lines, 0, lines.length);
+    const html = renderBlocks(ast);
+    blocksBody.innerHTML = `<div class="block-container">${html || '<p style="color:#888; text-align:center; padding: 40px;">No code to display</p>'}</div>`;
+  } catch (e) {
+    blocksBody.innerHTML = `<div class="blocks-error">Error parsing code: ${escapeHtml(String(e))}</div>`;
   }
+}
 
-  function renderBlocksToHtml(blocks) {
-    let html = '';
-    
-    for (const block of blocks) {
-      switch (block.type) {
-        case 'procedure':
-          html += `<div class="block-procedure">
-            <span class="block-procedure-header">PROCEDURE ${escapeHtml(block.name)} ${renderVal(block.params)}</span>
-            <div class="block-procedure-body">${renderBlocksToHtml(block.body)}</div>
-          </div>`;
-          break;
-          
-        case 'if':
-          html += `<div class="block-control">
-            <span class="block-control-header">IF ${renderCond(block.condition)}</span>
-            <div class="block-control-body">${renderBlocksToHtml(block.body)}</div>`;
-          if (block.elseBody) {
-            html += `<span class="block-else">ELSE</span>
-            <div class="block-control-body">${renderBlocksToHtml(block.elseBody)}</div>`;
-          }
-          html += `</div>`;
-          break;
-          
-        case 'repeat-times':
-          html += `<div class="block-control">
-            <span class="block-control-header">REPEAT ${renderVal(block.count)} TIMES</span>
-            <div class="block-control-body">${renderBlocksToHtml(block.body)}</div>
-          </div>`;
-          break;
-          
-        case 'repeat-until':
-          html += `<div class="block-control">
-            <span class="block-control-header">REPEAT UNTIL ${renderCond(block.condition)}</span>
-            <div class="block-control-body">${renderBlocksToHtml(block.body)}</div>
-          </div>`;
-          break;
-          
-        case 'for-each':
-          html += `<div class="block-control">
-            <span class="block-control-header">FOR EACH ${escapeHtml(block.itemVar)} IN ${renderExpression(block.listExpr)}</span>
-            <div class="block-control-body">${renderBlocksToHtml(block.body)}</div>
-          </div>`;
-          break;
-          
-        case 'display':
-          html += `<div class="block-statement"><span class="block-expr">DISPLAY ${renderVal(block.expr)}</span></div>`;
-          break;
-          
-        case 'return':
-          html += `<div class="block-statement"><span class="block-expr">RETURN ${renderVal(block.expr)}</span></div>`;
-          break;
-          
-        case 'assign':
-          html += `<div class="block-statement"><span class="block-expr">${escapeHtml(block.varName)} ← ${renderExpression(block.expr)}</span></div>`;
-          break;
-          
-        case 'list-assign':
-          html += `<div class="block-statement"><span class="block-expr">${escapeHtml(block.listName)}${renderVal(block.index)} ← ${renderExpression(block.value)}</span></div>`;
-          break;
-          
-        case 'call':
-          html += `<div class="block-statement">${renderExpression(block.expr)}</div>`;
-          break;
-          
-        case 'unknown':
-          html += `<div class="block-statement"><span class="block-expr">${escapeHtml(block.text)}</span></div>`;
-          break;
-      }
-    }
-    
-    return html;
+// ===== EVENT LISTENERS =====
+
+$("#runBtn").onclick = () => run(editor.value);
+$("#stopBtn").onclick = () => {
+  halted = true;
+  if (inputReject) {
+    inputReject(new Error("Stopped"));
+    hidePrompt();
   }
+  setStatus("Stopped", "error");
+};
 
-  function renderBlocks() {
-    try {
-      const lines = preprocess(editor.value);
-      const ast = parseBlocksAST(lines, 0, lines.length);
-      const html = renderBlocksToHtml(ast);
-      blocksBody.innerHTML = `<div class="block-container">${html || '<p style="color:#888;">No code to display</p>'}</div>`;
-    } catch (e) {
-      blocksBody.innerHTML = `<div class="blocks-error">Error parsing code: ${escapeHtml(String(e))}</div>`;
-    }
+$("#copyBtn").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(editor.value);
+    showToast("Code copied to clipboard!");
+  } catch (e) {
+    err("Failed to copy code");
   }
+};
 
-  // Event Listeners
-  $("#runBtn").onclick = () => run(editor.value);
-  $("#stopBtn").onclick = () => {
-    halted = true;
-    if (inputReject) {
-      inputReject(new Error("Stopped"));
-      hidePrompt();
-    }
-    setStatus("Stopped", "error");
-  };
+$("#blocksBtn").onclick = () => {
+  renderBlocksModal();
+  blocksModal.classList.add("show");
+};
+$("#closeBlocks").onclick = () => blocksModal.classList.remove("show");
+blocksModal.onclick = e => {
+  if (e.target === blocksModal) blocksModal.classList.remove("show");
+};
 
-  $("#copyBtn").onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(editor.value);
-      showToast("Code copied to clipboard!");
-    } catch (e) {
-      err("Failed to copy code");
-    }
-  };
-
-  $("#blocksBtn").onclick = () => {
-    renderBlocks();
-    blocksModal.classList.add("show");
-  };
-
-  $("#closeBlocks").onclick = () => blocksModal.classList.remove("show");
-  blocksModal.onclick = e => {
-    if (e.target === blocksModal) blocksModal.classList.remove("show");
-  };
-
-  document.addEventListener("keydown", e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      $("#runBtn").click();
-    }
-    if (e.key === "Escape") {
-      blocksModal.classList.remove("show");
-      helpModal.classList.remove("show");
-    }
-  });
-
-  $("#helpBtn").onclick = () => helpModal.classList.add("show");
-  $("#closeHelp").onclick = () => helpModal.classList.remove("show");
-  helpModal.onclick = e => {
-    if (e.target === helpModal) helpModal.classList.remove("show");
-  };
-
-  const samples = {
-    variables: {
-      label: "Variables",
-      items: {
-        "Variables & Types": `num ← 42\ntext ← "Hello"\nflag ← true\n\nDISPLAY(num)\nDISPLAY(text)\nDISPLAY(flag)`,
-        "Displaying Variables": `name ← "Alice"\nage ← 16\nDISPLAY("Name: " + name)\nDISPLAY("Age: " + age)`,
-        "Concatenation": `firstName ← "Ada"\nlastName ← "Lovelace"\nfullName ← firstName + " " + lastName\nDISPLAY(fullName)\n\nscore ← 95\nDISPLAY("Your score is: " + score)`,
-        "Swapping Values": `a ← 10\nb ← 20\nDISPLAY("Before: a = " + a + ", b = " + b)\n\ntemp ← a\na ← b\nb ← temp\n\nDISPLAY("After: a = " + a + ", b = " + b)`,
-        "Booleans & Comparisons": `x ← 8\ny ← 10\n\nDISPLAY("x = " + x + ", y = " + y)\nDISPLAY("x > y is: " + (x > y))\nDISPLAY("x < y is: " + (x < y))\nDISPLAY("x = y is: " + (x = y))\nDISPLAY("x ≠ y is: " + (x ≠ y))`,
-        "Boolean Logic": `a ← true\nb ← false\n\nDISPLAY("a AND b: " + (a AND b))\nDISPLAY("a OR b: " + (a OR b))\nDISPLAY("NOT a: " + (NOT a))`,
-        "MOD Operator": `DISPLAY("17 MOD 5 = " + (17 MOD 5))\nDISPLAY("10 MOD 3 = " + (10 MOD 3))\n\nnum ← 7\nIF(num MOD 2 = 0)\n{\n   DISPLAY(num + " is even")\n}\nELSE\n{\n   DISPLAY(num + " is odd")\n}`,
-        "RANDOM Function": `roll ← RANDOM(1, 6)\nDISPLAY("Dice roll: " + roll)\n\ncoin ← RANDOM(1, 2)\nIF(coin = 1)\n{\n   DISPLAY("Heads!")\n}\nELSE\n{\n   DISPLAY("Tails!")\n}`
-      }
-    },
-    conditionals: {
-      label: "Conditionals",
-      items: {
-        "IF Statement": `age ← 18\nIF(age ≥ 18)\n{\n   DISPLAY("You can vote!")\n}`,
-        "IF-ELSE": `score ← 75\nIF(score ≥ 60)\n{\n   DISPLAY("You passed!")\n}\nELSE\n{\n   DISPLAY("Try again.")\n}`,
-        "Nested IF": `grade ← 85\n\nIF(grade ≥ 90)\n{\n   DISPLAY("A")\n}\nELSE\n{\n   IF(grade ≥ 80)\n   {\n      DISPLAY("B")\n   }\n   ELSE\n   {\n      IF(grade ≥ 70)\n      {\n         DISPLAY("C")\n      }\n      ELSE\n      {\n         DISPLAY("Below C")\n      }\n   }\n}`,
-        "Boolean Conditions": `x ← 15\nIF(x > 10 AND x < 20)\n{\n   DISPLAY("x is between 10 and 20")\n}`,
-        "NOT Operator": `isRaining ← false\nIF(NOT isRaining)\n{\n   DISPLAY("Go outside!")\n}\nELSE\n{\n   DISPLAY("Take an umbrella")\n}`
-      }
-    },
-    loops: {
-      label: "Loops",
-      items: {
-        "REPEAT n TIMES": `REPEAT 5 TIMES\n{\n   DISPLAY("Hello!")\n}`,
-        "REPEAT with Counter": `count ← 1\nREPEAT 5 TIMES\n{\n   DISPLAY("Count: " + count)\n   count ← count + 1\n}`,
-        "REPEAT UNTIL": `num ← 1\nREPEAT UNTIL(num > 5)\n{\n   DISPLAY(num)\n   num ← num + 1\n}`,
-        "FOR EACH with List": `colors ← ["red", "green", "blue"]\nFOR EACH color IN colors\n{\n   DISPLAY(color)\n}`,
-        "Sum with FOR EACH": `numbers ← [10, 20, 30, 40]\nsum ← 0\nFOR EACH num IN numbers\n{\n   sum ← sum + num\n}\nDISPLAY("Sum: " + sum)`
-      }
-    },
-    lists: {
-      label: "Lists",
-      items: {
-        "Create & Access": `myList ← [10, 20, 30, 40]\nDISPLAY(myList[1])\nDISPLAY(myList[3])\nDISPLAY("Length: " + LENGTH(myList))\nDISPLAY("Full list: " + myList)`,
-        "Modify Elements": `nums ← [5, 10, 15]\nDISPLAY("Before: " + nums)\nnums[2] ← 99\nDISPLAY("After: " + nums)`,
-        "APPEND": `items ← [1, 2, 3]\nDISPLAY("Before: " + items)\nAPPEND(items, 4)\nAPPEND(items, 5)\nDISPLAY("After: " + items)`,
-        "INSERT": `letters ← ["A", "C", "D"]\nDISPLAY("Before: " + letters)\nINSERT(letters, 2, "B")\nDISPLAY("After: " + letters)`,
-        "REMOVE": `data ← [10, 20, 30, 40]\nDISPLAY("Before: " + data)\nREMOVE(data, 2)\nDISPLAY("After: " + data)`,
-        "Search in List": `names ← ["Alice", "Bob", "Charlie"]\nsearchFor ← "Bob"\nfound ← false\n\nFOR EACH name IN names\n{\n   IF(name = searchFor)\n   {\n      found ← true\n   }\n}\n\nIF(found)\n{\n   DISPLAY(searchFor + " was found!")\n}\nELSE\n{\n   DISPLAY(searchFor + " was not found.")\n}`
-      }
-    },
-    procedures: {
-      label: "Procedures",
-      items: {
-        "Simple Procedure": `PROCEDURE greet(name)\n{\n   DISPLAY("Hello, " + name + "!")\n}\n\ngreet("Alice")\ngreet("Bob")`,
-        "Procedure with Return": `PROCEDURE square(n)\n{\n   RETURN(n * n)\n}\n\nresult ← square(5)\nDISPLAY("5 squared is " + result)`,
-        "Multiple Parameters": `PROCEDURE add(a, b)\n{\n   RETURN(a + b)\n}\n\nsum ← add(10, 25)\nDISPLAY("10 + 25 = " + sum)`,
-        "Procedure Calling Procedure": `PROCEDURE double(x)\n{\n   RETURN(x * 2)\n}\n\nPROCEDURE quadruple(x)\n{\n   RETURN(double(double(x)))\n}\n\nDISPLAY(quadruple(5))`
-      }
-    },
-    programs: {
-      label: "Program Samples",
-      items: {
-        "1. Variables & Booleans": `name ← "Student"\nscore1 ← 85\nscore2 ← 92\n\nDISPLAY("Welcome, " + name + "!")\nDISPLAY("Score 1: " + score1)\nDISPLAY("Score 2: " + score2)\n\naverage ← (score1 + score2) / 2\nDISPLAY("Average: " + average)\n\nDISPLAY("Score1 > Score2: " + (score1 > score2))\nDISPLAY("Both above 80: " + (score1 > 80 AND score2 > 80))`,
-        "2. Variables & IF": `DISPLAY("Enter your score:")\nscore ← INPUT()\n\nIF(score ≥ 90)\n{\n   grade ← "A"\n}\nELSE\n{\n   IF(score ≥ 80)\n   {\n      grade ← "B"\n   }\n   ELSE\n   {\n      IF(score ≥ 70)\n      {\n         grade ← "C"\n      }\n      ELSE\n      {\n         grade ← "F"\n      }\n   }\n}\n\nDISPLAY("Grade: " + grade)`,
-        "3. Variables, List & IF": `scores ← [78, 92, 65, 88, 95, 71]\nDISPLAY("Scores: " + scores)\n\nmax ← scores[1]\nFOR EACH score IN scores\n{\n   IF(score > max)\n   {\n      max ← score\n   }\n}\n\nDISPLAY("Highest score: " + max)\n\nIF(max ≥ 90)\n{\n   DISPLAY("Top score is an A!")\n}`,
-        "4. List, Loop & IF": `grades ← [85, 42, 78, 95, 55, 67, 88, 39]\npassingCount ← 0\nfailingCount ← 0\n\nFOR EACH grade IN grades\n{\n   IF(grade ≥ 60)\n   {\n      passingCount ← passingCount + 1\n   }\n   ELSE\n   {\n      failingCount ← failingCount + 1\n   }\n}\n\nDISPLAY("All grades: " + grades)\nDISPLAY("Number passing: " + passingCount)\nDISPLAY("Number failing: " + failingCount)`,
-        "5. Procedures & Return": `PROCEDURE calculateSum(numList)\n{\n   total ← 0\n   FOR EACH num IN numList\n   {\n      total ← total + num\n   }\n   RETURN(total)\n}\n\nPROCEDURE findMax(numList)\n{\n   maxVal ← numList[1]\n   FOR EACH num IN numList\n   {\n      IF(num > maxVal)\n      {\n         maxVal ← num\n      }\n   }\n   RETURN(maxVal)\n}\n\ndata ← [23, 67, 45, 89, 12, 56]\nDISPLAY("Data: " + data)\nDISPLAY("Sum: " + calculateSum(data))\nDISPLAY("Max: " + findMax(data))`,
-        "6. Login System (Full)": `usernames ← ["admin", "student1", "teacher"]\npasswords ← ["pass123", "learn456", "teach789"]\n\nPROCEDURE checkCredentials(inputUser, inputPass)\n{\n   index ← 1\n   FOR EACH user IN usernames\n   {\n      IF(user = inputUser)\n      {\n         IF(passwords[index] = inputPass)\n         {\n            RETURN(true)\n         }\n      }\n      index ← index + 1\n   }\n   RETURN(false)\n}\n\nPROCEDURE login(user, pass)\n{\n   isValid ← checkCredentials(user, pass)\n   IF(isValid)\n   {\n      DISPLAY("ACCESS GRANTED")\n   }\n   ELSE\n   {\n      DISPLAY("INTRUDER ALERT")\n   }\n   RETURN(isValid)\n}\n\nDISPLAY("Enter username:")\nenteredUser ← INPUT()\nDISPLAY("Enter password:")\nenteredPass ← INPUT()\n\nresult ← login(enteredUser, enteredPass)`
-      }
-    }
-  };
-
-  const samplesMenu = $("#samplesMenu");
-  const categoryIcons = { variables: "x", conditionals: "?", loops: "↻", procedures: "ƒ", lists: "[ ]", programs: "◆" };
-
-  for (const [catKey, category] of Object.entries(samples)) {
-    const catEl = document.createElement("div");
-    catEl.className = "dropdown-category";
-    catEl.textContent = category.label;
-    samplesMenu.appendChild(catEl);
-
-    for (const [name, code] of Object.entries(category.items)) {
-      const item = document.createElement("div");
-      item.className = `dropdown-item cat-${catKey}`;
-      item.innerHTML = `<span class="icon">${categoryIcons[catKey]}</span>${name}`;
-      item.onclick = () => {
-        editor.value = code;
-        updateLineNumbers();
-        samplesMenu.classList.remove("show");
-      };
-      samplesMenu.appendChild(item);
-    }
-  }
-
-  const samplesBtn = $("#samplesBtn");
-  samplesBtn.onclick = (e) => {
-    e.stopPropagation();
-    samplesMenu.classList.toggle("show");
-  };
-
-  document.addEventListener("click", () => samplesMenu.classList.remove("show"));
-  samplesMenu.onclick = (e) => e.stopPropagation();
-
-  editor.value = `DISPLAY("Welcome to AP CSP Console!")\nDISPLAY("Select an example from the menu above.")`;
-  updateLineNumbers();
-
-  const resizer = $("#resizer");
-  const mainEl = $("main");
-  let isResizing = false;
-
-  resizer.addEventListener("mousedown", (e) => {
-    isResizing = true;
-    document.body.style.cursor = "col-resize";
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
     e.preventDefault();
-  });
-
-  document.addEventListener("mousemove", (e) => {
-    if (!isResizing) return;
-    const mainRect = mainEl.getBoundingClientRect();
-    const offsetX = e.clientX - mainRect.left;
-    const percentage = (offsetX / mainRect.width) * 100;
-    if (percentage > 20 && percentage < 80) {
-      mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
-      resizer.style.left = `calc(${percentage}% - 6px)`;
-    }
-  });
-
-  document.addEventListener("mouseup", () => {
-    if (isResizing) {
-      isResizing = false;
-      document.body.style.cursor = "";
-    }
-  });
-
-  setStatus("Ready");
-  sys("✓ Emulator ready. Press Run to execute.");
+    $("#runBtn").click();
+  }
+  if (e.key === "Escape") {
+    blocksModal.classList.remove("show");
+    helpModal.classList.remove("show");
+  }
 });
+
+$("#helpBtn").onclick = () => helpModal.classList.add("show");
+$("#closeHelp").onclick = () => helpModal.classList.remove("show");
+helpModal.onclick = e => {
+  if (e.target === helpModal) helpModal.classList.remove("show");
+};
+
+// Samples setup
+const samples = {
+  variables: {
+    label: "Variables",
+    icon: "V",
+    items: {
+      "Variables & Types": `num ← 42\ntext ← "Hello"\nflag ← true\n\nDISPLAY(num)\nDISPLAY(text)\nDISPLAY(flag)`,
+      "Arithmetic": `x ← 10\ny ← 3\n\ndiv ← x / y\nmod ← x MOD y\n\nDISPLAY(div)\nDISPLAY(mod)\nDISPLAY((x * 2) - 5)`,
+      "Random Numbers": `roll ← RANDOM(1, 6)\nDISPLAY("Dice roll: " + roll)\n\ncoin ← RANDOM(1, 2)\nIF(coin = 1)\n{\n DISPLAY("Heads!")\n}\nELSE\n{\n DISPLAY("Tails!")\n}`
+    }
+  },
+  conditionals: {
+    label: "Conditionals",
+    icon: "I",
+    items: {
+      "IF Statement": `age ← 18\nIF(age ≥ 18)\n{\n DISPLAY("You can vote!")\n}`,
+      "IF-ELSE": `score ← 75\nIF(score ≥ 60)\n{\n DISPLAY("You passed!")\n}\nELSE\n{\n DISPLAY("Try again.")\n}`,
+      "Nested IF": `grade ← 85\n\nIF(grade ≥ 90)\n{\n DISPLAY("A")\n}\nELSE\n{\n IF(grade ≥ 80)\n {\n DISPLAY("B")\n }\n ELSE\n {\n IF(grade ≥ 70)\n {\n DISPLAY("C")\n }\n ELSE\n {\n DISPLAY("Below C")\n }\n }\n}`,
+      "Boolean Conditions": `x ← 15\nIF(x > 10 AND x < 20)\n{\n DISPLAY("x is between 10 and 20")\n}`,
+      "NOT Operator": `isRaining ← false\nIF(NOT isRaining)\n{\n DISPLAY("Go outside!")\n}\nELSE\n{\n DISPLAY("Take an umbrella")\n}`
+    }
+  },
+  loops: {
+    label: "Loops",
+    icon: "R",
+    items: {
+      "REPEAT n TIMES": `REPEAT 5 TIMES\n{\n DISPLAY("Hello!")\n}`,
+      "REPEAT with Counter": `count ← 1\nREPEAT 5 TIMES\n{\n DISPLAY("Count: " + count)\n count ← count + 1\n}`,
+      "REPEAT UNTIL": `num ← 1\nREPEAT UNTIL(num > 5)\n{\n DISPLAY(num)\n num ← num + 1\n}`,
+      "FOR EACH with List": `colors ← ["red", "green", "blue"]\nFOR EACH color IN colors\n{\n DISPLAY(color)\n}`,
+      "FOR EACH with String": `word ← "CITRIN"\nFOR EACH letter IN word\n{\n DISPLAY(letter)\n}`
+    }
+  },
+  procedures: {
+    label: "Procedures",
+    icon: "P",
+    items: {
+      "Simple Procedure (No Return)": `PROCEDURE greet(name)\n{\n DISPLAY("Hello, " + name + "!")\n}\n\ngreet("World")\ngreet("User")`,
+      "Procedure with RETURN": `PROCEDURE calculateArea(width, height)\n{\n RETURN(width * height)\n}\n\narea ← calculateArea(5, 10)\nDISPLAY("Area is: " + area)`,
+      "Scope Example": `x ← 100\n\nPROCEDURE showX()\n{\n x ← 50 // This changes the global x\n DISPLAY("Inside: " + x)\n}\n\nDISPLAY("Before: " + x)\nshowX()\nDISPLAY("After: " + x)`
+    }
+  },
+  lists: {
+    label: "Lists & Strings",
+    icon: "L",
+    items: {
+      "List Basics": `myList ← [10, 20, 30]\nDISPLAY("Length: " + LENGTH(myList))\nDISPLAY("Third element: " + myList[3])`,
+      "List Modification": `nums ← [1, 2, 4]\nINSERT(nums, 3, 3) // Insert 3 at index 3\nAPPEND(nums, 5)\nREMOVE(nums, 1) // Remove 1st element\nDISPLAY(nums)`,
+      "Substring/Sublist (FIXED)": `text ← "apple pie"\nsubtext ← IDX(text, 7, 9) // 1-indexed from 7 to 9\nDISPLAY("Subtext: " + subtext)\n\nlist ← [10, 20, 30, 40]\nsublist ← IDX(list, 2, 3) // 1-indexed from 2 to 3\nDISPLAY("Sublist: " + sublist)`,
+      "String CONTAINS": `word ← "programming"\ncheck1 ← CONTAINS(word, "gram")\ncheck2 ← CONTAINS(word, "xyz")\nDISPLAY(check1)\nDISPLAY(check2)`
+    }
+  },
+  programs: {
+    label: "Program Samples",
+    icon: "S",
+    items: {
+      "1. Variables & Booleans": `name ← "Student"\nscore1 ← 85\nscore2 ← 92\n\nDISPLAY("Welcome, " + name + "!")\nDISPLAY("Score 1: " + score1)\nDISPLAY("Score 2: " + score2)\n\naverage ← (score1 + score2) / 2\nDISPLAY("Average: " + average)\n\nDISPLAY("Score1 > Score2: " + (score1 > score2))\nDISPLAY("Both above 80: " + (score1 > 80 AND score2 > 80))`,
+      "2. Variables & IF": `DISPLAY("Enter your score:")\nscore ← INPUT()\n\nIF(score ≥ 90)\n{\n grade ← "A"\n}\nELSE\n{\n IF(score ≥ 80)\n {\n grade ← "B"\n }\n ELSE\n {\n IF(score ≥ 70)\n {\n grade ← "C"\n }\n ELSE\n {\n grade ← "F"\n }\n }\n}\n\nDISPLAY("Grade: " + grade)`,
+      "3. Variables, List & IF": `scores ← [78, 92, 65, 88, 95, 71]\nDISPLAY("Scores: " + scores)\n\nmax ← scores[1]\nFOR EACH score IN scores\n{\n IF(score > max)\n {\n max ← score\n }\n}\n\nDISPLAY("Highest Score: " + max)`,
+      "4. Bubble Sort (Procedure)": `list ← [5, 1, 4, 2, 8]\nDISPLAY("Original: " + list)\n\nPROCEDURE bubbleSort(aList)\n{\n n ← LENGTH(aList)\n REPEAT n TIMES\n {\n  REPEAT n - 1 TIMES\n  {\n   i ← LENGTH(aList) - LENGTH(aList) + 1 // Ensure i starts at 1\n   current ← aList[i]\n   next ← aList[i + 1]\n\n   IF(current > next)\n   {\n    // Swap\n    aList[i] ← next\n    aList[i + 1] ← current\n   }\n   i ← i + 1\n  }\n }\n}\n\nbubbleSort(list)\nDISPLAY("Sorted: " + list)`
+    }
+  }
+};
+
+const samplesMenu = $("#samplesMenu");
+const categoryIcons = {
+  variables: "V",
+  conditionals: "I",
+  loops: "R",
+  procedures: "P",
+  lists: "L",
+  programs: "S"
+};
+
+for (const [catKey, category] of Object.entries(samples)) {
+  const catEl = document.createElement("div");
+  catEl.className = "dropdown-category";
+  catEl.textContent = category.label;
+  samplesMenu.appendChild(catEl);
+
+  for (const [name, code] of Object.entries(category.items)) {
+    const item = document.createElement("div");
+    item.className = `dropdown-item cat-${catKey}`;
+    item.innerHTML = `<span class="icon">${categoryIcons[catKey]}</span>${name}`;
+    item.onclick = () => {
+      editor.value = code;
+      updateLineNumbers();
+      samplesMenu.classList.remove("show");
+    };
+    samplesMenu.appendChild(item);
+  }
+}
+
+const samplesBtn = $("#samplesBtn");
+samplesBtn.onclick = (e) => {
+  e.stopPropagation();
+  samplesMenu.classList.toggle("show");
+};
+
+document.addEventListener("click", () => samplesMenu.classList.remove("show"));
+samplesMenu.onclick = (e) => e.stopPropagation();
+
+editor.value = `DISPLAY("Welcome to AP CSP Console!")\nDISPLAY("Select an example from the menu above.")`;
+updateLineNumbers();
+
+const resizer = $("#resizer");
+const mainEl = $("main");
+let isResizing = false;
+
+// Resizer logic
+resizer.addEventListener("mousedown", (e) => {
+  isResizing = true;
+  document.body.style.cursor = "col-resize";
+  e.preventDefault();
+});
+
+document.addEventListener("mousemove", (e) => {
+  if (!isResizing) return;
+  const mainRect = mainEl.getBoundingClientRect();
+  const offsetX = e.clientX - mainRect.left;
+  const percentage = (offsetX / mainRect.width) * 100;
+  if (percentage > 20 && percentage < 80) {
+    mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
+    resizer.style.left = `calc(${percentage}% - 6px)`;
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  if (isResizing) {
+    isResizing = false;
+    document.body.style.cursor = "default";
+    // Force line numbers update after resize (debounce could be added)
+    updateLineNumbers(); 
+  }
+});
+
+editor.addEventListener("input", updateLineNumbers);
+editor.addEventListener("scroll", () => {
+  lineNumbers.scrollTop = editor.scrollTop;
+});
+
+// Initial setup
+updateLineNumbers();
+
+// Theme Toggle
+const themeBtn = $("#themeBtn");
+const currentTheme = localStorage.getItem('theme') || 'dark-mode';
+document.body.classList.add(currentTheme);
+
+themeBtn.onclick = () => {
+  if (document.body.classList.contains('light-mode')) {
+    document.body.classList.remove('light-mode');
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+    document.body.classList.add('light-mode');
+    localStorage.setItem('theme', 'light-mode');
+  }
+  
+  // Update icon based on theme
+  const isLight = document.body.classList.contains('light-mode');
+  themeBtn.innerHTML = isLight
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+};
+themeBtn.click(); // Initial call to set the correct icon
 </script>
+
 </body>
 </html>
