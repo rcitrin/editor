@@ -853,7 +853,7 @@ kbd {
 <header>
   <div class="logo">
     <div class="logo-icon">C</div>
-    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.6)</span> </div>
+    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.65)</span> </div>
   </div>
 
   <div class="header-actions">
@@ -1393,13 +1393,60 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
           if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
           return L.length;
         },
-        IDX: (L, i) => {
-          if (L == null) throw "List access error: list is undefined. Make sure the list exists.";
-          if (!Array.isArray(L)) throw "List access error: variable is not a list";
-          if (i < 1 || i > L.length) throw `List index out of bounds: index ${i}, but list length is ${L.length}. Remember: lists are 1-indexed.`;
-          return L[i - 1];
-        }
-      };
+IDX: (L, i, j) => {
+            // Convert 1-based index (i) to 0-based
+            i = Math.round(i) - 1;
+
+            // --- String Support (Indexing or Substring) ---
+            if (typeof L === "string") {
+                if (j !== undefined) {
+                    // Substring: IDX(string, start, end)
+                    j = Math.round(j); // 1-based end position
+
+                    if (i < 0 || i >= L.length) throw "IDX: start index out of bounds";
+                    
+                    // The 1-based end index (j) must be between 1 and L.length (inclusive)
+                    if (j < 1 || j > L.length) throw "IDX: end index out of bounds"; 
+
+                    if (i >= j) return "";
+                    
+                    // JavaScript's substring uses (0-based start, 0-based *exclusive* end), 
+                    // so passing the 1-based end position (j) is correct.
+                    return L.substring(i, j);
+                } else {
+                    // String Indexing: IDX(string, index)
+                    if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+                    return L.charAt(i);
+                }
+            }
+
+            // --- List Support (Indexing or Sublist) ---
+            if (!Array.isArray(L)) throw "IDX: first argument must be a list or a string";
+
+            if (j !== undefined) {
+                // Sublist: IDX(list, start, end)
+                j = Math.round(j); // 1-based end position
+
+                if (i < 0 || i >= L.length) throw "IDX: start index out of bounds";
+                
+                // Correction: The broken code allowed L.length + 1. 
+                // For a sublist, the 1-based end index (j) must be at most L.length.
+                if (j < 1 || j > L.length) throw "IDX: end index out of bounds"; 
+                
+                if (i >= j) return [];
+                
+                // JavaScript's slice uses (0-based start, 0-based *exclusive* end),
+                // so passing the 1-based end position (j) is correct.
+                return L.slice(i, j);
+            }
+
+            // List Indexing: IDX(list, index)
+            if (i < 0 || i >= L.length) throw "IDX: index out of bounds";
+            return L[i];
+        },
+
+
+	};
 
       let currentEnv = env;
       while (currentEnv) {
