@@ -377,6 +377,7 @@ button.ghost:hover {
 .dropdown-item.cat-loops .icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
 .dropdown-item.cat-procedures .icon { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
 .dropdown-item.cat-lists .icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.dropdown-item.cat-strings .icon { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
 .dropdown-item.cat-programs .icon { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
 
 .editor-wrapper {
@@ -853,7 +854,7 @@ kbd {
 <header>
   <div class="logo">
     <div class="logo-icon">C</div>
-    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.6)</span> </div>
+    <div class="logo-text"><span>CITRIN: </span>  TBA PSEUDOCODE CONSOLE <span> (v2.7)</span> </div>
   </div>
 
   <div class="header-actions">
@@ -1034,6 +1035,22 @@ FOR EACH item IN aList
 }</pre>
       </div>
       <div class="help-section">
+        <h4>String Operations</h4>
+        <pre>CONTAINS(text, substring)    # Returns true/false
+text[i]                      # Get character at index i (1-indexed)
+text[start, end]             # Get substring from start to end (1-indexed, inclusive)
+LENGTH(text)                 # Returns string length
+
+Example:
+text ← "HELLO WORLD"
+DISPLAY(text[1])             # Displays "H"
+DISPLAY(SUBSTRING(text, 1, 5))  # Displays "HELLO"
+IF(CONTAINS(text, "WORLD"))
+{
+   DISPLAY("Found it!")
+}</pre>
+      </div>
+      <div class="help-section">
         <h4>Procedures</h4>
         <pre>PROCEDURE procName(parameter1, parameter2, ...)
 {
@@ -1049,7 +1066,9 @@ PROCEDURE procName(parameter1, parameter2, ...)
       <div class="help-section">
         <h4>Built-in Functions</h4>
         <pre>RANDOM(a, b)
-LENGTH(aList)</pre>
+LENGTH(aList)
+CONTAINS(text, substring)
+SUBSTRING(text, start, end)</pre>
       </div>
     </div>
   </div>
@@ -1170,7 +1189,9 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
     length: { title: "LENGTH Syntax Error", desc: "LENGTH returns the number of elements in a list:", example: `aList ← [1, 2, 3]\nlen ← LENGTH(aList)` },
     append: { title: "APPEND Syntax Error", desc: "APPEND adds a value to the end of a list:", example: `aList ← [1, 2]\nAPPEND(aList, 3)` },
     insert: { title: "INSERT Syntax Error", desc: "INSERT adds a value at a specific index:", example: `aList ← [1, 3]\nINSERT(aList, 2, 2)` },
-    remove: { title: "REMOVE Syntax Error", desc: "REMOVE removes a value at a specific index:", example: `aList ← [1, 2, 3]\nREMOVE(aList, 2)` }
+    remove: { title: "REMOVE Syntax Error", desc: "REMOVE removes a value at a specific index:", example: `aList ← [1, 2, 3]\nREMOVE(aList, 2)` },
+    contains: { title: "CONTAINS Syntax", desc: "CONTAINS checks if a substring exists in text:", example: `text ← "WINNER WINNER"\nIF(CONTAINS(text, "WIN"))\n{\n   DISPLAY("Found!")\n}` },
+    substring: { title: "SUBSTRING Syntax", desc: "SUBSTRING extracts part of a string (1-indexed, inclusive):", example: `text ← "HELLO WORLD"\nDISPLAY(SUBSTRING(text, 1, 5))  # "HELLO"\nDISPLAY(SUBSTRING(text, 7, 11)) # "WORLD"\nDISPLAY(text[1])  # "H" (single character)` }
   };
 
   function showSyntaxHelp(type) {
@@ -1199,6 +1220,8 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
     else if (lowerErr.includes("append")) showSyntaxHelp("append");
     else if (lowerErr.includes("insert")) showSyntaxHelp("insert");
     else if (lowerErr.includes("remove")) showSyntaxHelp("remove");
+    else if (lowerErr.includes("contains")) showSyntaxHelp("contains");
+    else if (lowerErr.includes("substring") || lowerErr.includes("slice")) showSyntaxHelp("substring");
     else if (lowerErr.includes("list") || lowerErr.includes("index")) showSyntaxHelp("list");
     else if (lowerErr.includes("boolean") || lowerErr.includes("and") || lowerErr.includes("or") || lowerErr.includes("not")) showSyntaxHelp("boolean");
     else if (lowerErr.includes("assignment") || lowerErr.includes("←") || lowerErr.includes("<-")) showSyntaxHelp("assignment");
@@ -1389,15 +1412,48 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
           L.splice(i - 1, 1);
         },
         LENGTH: L => {
-          if (L == null) throw "LENGTH: argument is undefined. Make sure the list exists.";
-          if (!Array.isArray(L)) throw "LENGTH: argument must be a list";
+          if (L == null) throw "LENGTH: argument is undefined. Make sure the list or string exists.";
+          if (typeof L === 'string') return L.length;
+          if (!Array.isArray(L)) throw "LENGTH: argument must be a list or string";
           return L.length;
         },
         IDX: (L, i) => {
-          if (L == null) throw "List access error: list is undefined. Make sure the list exists.";
-          if (!Array.isArray(L)) throw "List access error: variable is not a list";
+          if (L == null) throw "Access error: variable is undefined. Make sure it exists.";
+          // Handle strings as character arrays (1-indexed)
+          if (typeof L === 'string') {
+            if (i < 1 || i > L.length) throw `String index out of bounds: index ${i}, but string length is ${L.length}. Remember: strings are 1-indexed.`;
+            return L[i - 1];
+          }
+          if (!Array.isArray(L)) throw "Access error: variable is not a list or string";
           if (i < 1 || i > L.length) throw `List index out of bounds: index ${i}, but list length is ${L.length}. Remember: lists are 1-indexed.`;
           return L[i - 1];
+        },
+        CONTAINS: (text, substring) => {
+          if (text === undefined || substring === undefined) throw "CONTAINS requires two arguments: CONTAINS(text, substring)";
+          const textStr = String(text);
+          const subStr = String(substring);
+          return textStr.includes(subStr);
+        },
+        SUBSTRING: (text, start, end) => {
+          if (text === undefined) throw "SUBSTRING: text is undefined";
+          if (start === undefined || end === undefined) throw "SUBSTRING requires three arguments: SUBSTRING(text, start, end)";
+          const textStr = String(text);
+          if (start < 1 || end < 1 || start > textStr.length || end > textStr.length) {
+            throw `SUBSTRING index out of bounds: [${start}, ${end}], string length is ${textStr.length}. Remember: strings are 1-indexed.`;
+          }
+          if (start > end) throw `SUBSTRING: start index ${start} cannot be greater than end index ${end}`;
+          return textStr.substring(start - 1, end);
+        },
+        CONCAT: (...args) => {
+          return args.map(a => String(a)).join('');
+        },
+        LOWERCASE: (text) => {
+          if (text === undefined) throw "LOWERCASE: argument is undefined";
+          return String(text).toLowerCase();
+        },
+        UPPERCASE: (text) => {
+          if (text === undefined) throw "UPPERCASE: argument is undefined";
+          return String(text).toUpperCase();
         }
       };
 
@@ -1634,7 +1690,7 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
         const listExpr = m[2];
 
         const list = await evalExpr(listExpr);
-        if (!Array.isArray(list)) throw `FOR EACH at line ${idx + 1}: ${listExpr} is not a list`;
+        if (!Array.isArray(list) && typeof list !== 'string') throw `FOR EACH at line ${idx + 1}: ${listExpr} is not a list or string`;
 
         i++;
         if (i >= end || LINES[i].s !== "{") throw `FOR EACH at line ${idx + 1} must be followed by {`;
@@ -1649,7 +1705,9 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
         }
         const blockEnd = i - 1;
 
-        for (const item of list) {
+        // Support iterating over strings as character arrays
+        const iterable = typeof list === 'string' ? list.split('') : list;
+        for (const item of iterable) {
           if (halted) return null;
           env[itemVar] = item;
           const result = await execRange(blockStart, blockEnd, env, insideProc);
@@ -2174,6 +2232,18 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
         "Search in List": `names ← ["Alice", "Bob", "Charlie"]\nsearchFor ← "Bob"\nfound ← false\n\nFOR EACH name IN names\n{\n   IF(name = searchFor)\n   {\n      found ← true\n   }\n}\n\nIF(found)\n{\n   DISPLAY(searchFor + " was found!")\n}\nELSE\n{\n   DISPLAY(searchFor + " was not found.")\n}`
       }
     },
+    strings: {
+      label: "Strings",
+      items: {
+        "CONTAINS": `email ← "user@example.com"\n\nIF(CONTAINS(email, "@"))\n{\n   DISPLAY("Valid email format!")\n}\nELSE\n{\n   DISPLAY("Invalid email!")\n}`,
+        "SUBSTRING": `text ← "HELLO WORLD"\n\nDISPLAY("Full text: " + text)\nDISPLAY("First 5 chars: " + SUBSTRING(text, 1, 5))\nDISPLAY("Last 5 chars: " + SUBSTRING(text, 7, 11))`,
+        "String Indexing": `word ← "APPLE"\n\nDISPLAY("First letter: " + word[1])\nDISPLAY("Third letter: " + word[3])\nDISPLAY("Last letter: " + word[LENGTH(word)])`,
+        "Iterate Over String": `word ← "CODE"\n\nFOR EACH letter IN word\n{\n   DISPLAY(letter)\n}`,
+        "Spam Filter": `emails ← ["You won a prize!", "Meeting tomorrow", "WINNER! Click here", "Project update"]\nspamList ← []\n\nFOR EACH item IN emails\n{\n   IF(CONTAINS(item, "WINNER") OR CONTAINS(item, "won"))\n   {\n      APPEND(spamList, item)\n   }\n}\n\nDISPLAY("Spam messages found:")\nFOR EACH spam IN spamList\n{\n   DISPLAY("  - " + spam)\n}`,
+        "Case Conversion": `text ← "Hello World"\n\nDISPLAY("Original: " + text)\nDISPLAY("Uppercase: " + UPPERCASE(text))\nDISPLAY("Lowercase: " + LOWERCASE(text))`,
+        "Extract Domain": `email ← "student@school.edu"\natPos ← 0\nindex ← 1\n\nREPEAT UNTIL(index > LENGTH(email))\n{\n   IF(email[index] = "@")\n   {\n      atPos ← index\n   }\n   index ← index + 1\n}\n\ndomain ← SUBSTRING(email, atPos + 1, LENGTH(email))\nDISPLAY("Domain: " + domain)`
+      }
+    },
     procedures: {
       label: "Procedures",
       items: {
@@ -2197,7 +2267,7 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
   };
 
   const samplesMenu = $("#samplesMenu");
-  const categoryIcons = { variables: "x", conditionals: "?", loops: "↻", procedures: "ƒ", lists: "[ ]", programs: "◆" };
+  const categoryIcons = { variables: "x", conditionals: "?", loops: "↻", procedures: "ƒ", lists: "[ ]", strings: "\" \"", programs: "◆" };
 
   for (const [catKey, category] of Object.entries(samples)) {
     const catEl = document.createElement("div");
@@ -2227,7 +2297,7 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
   document.addEventListener("click", () => samplesMenu.classList.remove("show"));
   samplesMenu.onclick = (e) => e.stopPropagation();
 
-  editor.value = `DISPLAY("Welcome to AP CSP Console!")\nDISPLAY("Select an example from the menu above.")`;
+  editor.value = `DISPLAY("Welcome to AP CSP Console v2.7!")\nDISPLAY("New: CONTAINS, SUBSTRING, and string operations!")\nDISPLAY("")\nDISPLAY("Try the Strings examples from the menu above.")`;
   updateLineNumbers();
 
   const resizer = $("#resizer");
