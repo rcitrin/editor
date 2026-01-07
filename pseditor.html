@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TBA PYTHON CONSOLE</title>
+
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #000000;
+  --bg-elevated: #181818;
+  --panel-bg: #060606;
+  --panel-bg-hover: #1a1a1a;
+  --border: #1a1a1a;
+  --border-subtle: #1a1a1a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+
+  --accent: #666666;
+  --accent-hover: #999999;
+  --accent-glow: rgba(101, 136, 26, 0.25);
+
+  --danger: #b50d28;
+  --danger-hover: #b50d28;
+
+  --editor-caret: #519BB0;
+
+  --gradient-1: linear-gradient(135deg, #b50d28 0%, #b50d28 100%);
+  
+  --btn-secondary-bg: #2a2a2a;
+  --btn-secondary-border: #3a3a3a;
+  --btn-secondary-hover: #383838;
+}
+
+body.light-mode {
+  --bg: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --panel-bg: #ffffff;
+  --panel-bg-hover: #f0f0f0;
+  --border: #d0d0d0;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --btn-secondary-bg: #e8e8e8;
+  --btn-secondary-border: #ccc;
+  --btn-secondary-hover: #ddd;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { 
+  margin: 0; 
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+header {
+  padding: 16px 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: #b50d28;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(166, 37, 58, 0.4);
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.logo-text span {
+  background: var(--gradient-1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  min-height: 0;
+  position: relative;
+}
+
+.resizer {
+  position: absolute;
+  width: 12px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  top: 0;
+  left: calc(50% - 6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer::after {
+  content: '';
+  width: 4px;
+  height: 48px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.resizer:hover::after {
+  background: var(--accent);
+  height: 64px;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.panel {
+  background: var(--panel-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.panel-header .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.toolbar {
+  padding: 12px 16px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 6px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 8px;
+}
+
+button {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+button:hover {
+  background: var(--panel-bg-hover);
+  border-color: #333;
+}
+
+button.primary {
+  background: #13d11c;
+  border-color: #13d11c;
+  color: #000;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: #11b919;
+  border-color: #11b919;
+  box-shadow: 0 4px 12px rgba(19, 209, 28, 0.3);
+}
+    
+button.danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+button.ghost {
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+}
+
+button.ghost:hover {
+  background: var(--btn-secondary-hover);
+  border-color: #4a4a4a;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.dropdown-trigger::after {
+  content: '▾';
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dropdown-menu.show {
+  display: block;
+  animation: dropdownIn 0.15s ease;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-item:hover {
+  background: var(--panel-bg-hover);
+  color: var(--text-primary);
+}
+
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: var(--panel-bg);
+}
+
+.line-numbers {
+  padding: 16px 12px;
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: right;
+  user-select: none;
+  border-right: 1px solid var(--border);
+  min-width: 48px;
+  overflow: hidden;
+  white-space: pre;
+}
+
+textarea {
+  flex: 1;
+  padding: 16px;
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  caret-color: var(--editor-caret);
+  overflow: auto;
+}
+
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.console {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: var(--panel-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.console .line {
+  padding: 2px 0;
+  border-radius: 4px;
+}
+
+.console .log { color: var(--text-primary); }
+.console .err { color: var(--danger); }
+.console .sys { color: var(--text-secondary); }
+
+.status {
+  padding: 8px 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.running {
+  background: var(--accent);
+  animation: pulse 1s infinite;
+}
+
+.status-dot.error {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+footer {
+  padding: 12px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 2000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.kbd-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+kbd {
+  padding: 2px 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+}
+
+.help-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+}
+
+.help-modal.show {
+  display: flex;
+}
+
+.help-content {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+.help-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.help-body {
+  padding: 24px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.help-section {
+  margin-bottom: 24px;
+}
+
+.help-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.help-section pre {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  
+  .resizer {
+    width: 100%; 
+    height: 12px;
+    top: calc(50% - 6px);
+    left: 0;
+    cursor: row-resize;
+  }
+  
+  .resizer::after {
+    width: 48px;
+    height: 4px;
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  
+  .kbd-hint {
+    display: none;
+  }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">C</div>
+    <div class="logo-text"><span>CITRIN: </span>  TBA PYTHON CONSOLE <span> (v1.0)</span> </div>
+  </div>
+
+  <div class="header-actions">
+    <button class="ghost" id="themeBtn" title="Toggle Light/Dark Mode">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    </button>
+
+    <button class="ghost" id="helpBtn" title="Python Reference">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      Help
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="resizer" id="resizer"></div>
+  
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Program Editor (INPUT)</h2>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="primary" id="runBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Run
+        </button>
+        <button class="danger" id="stopBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+          Stop
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="toolbar-group">
+        <button id="copyBtn" class="ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <div class="dropdown">
+        <button class="dropdown-trigger ghost" id="samplesBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Examples
+        </button>
+        <div class="dropdown-menu" id="samplesMenu"></div>
+      </div>
+      
+      <div class="kbd-hint">
+        <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run
+      </div>
+    </div>
+    <div class="editor-wrapper">
+      <div class="line-numbers" id="lineNumbers"></div>
+      <textarea id="editor" placeholder="# Write your Python code here..." spellcheck="false"># Welcome to Python!
+</textarea>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Console (Output)</h2>
+    </div>
+    <div class="console" id="console"></div>
+    <div class="status" id="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+  </section>
+</main>
+
+<footer>
+  @Citrin • TechBoston Academy
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<div class="help-modal" id="helpModal">
+  <div class="help-content">
+    <div class="help-header">
+      <h3>📖 Python Quick Reference</h3>
+      <button class="ghost" id="closeHelp">✕</button>
+    </div>
+    <div class="help-body">
+      <div class="help-section">
+        <h4>Output & Input</h4>
+        <pre>print("Hello!")          # Display output
+name = input("Name: ")   # Get user input</pre>
+      </div>
+      <div class="help-section">
+        <h4>Variables & Math</h4>
+        <pre>x = 10                   # Integer
+y = 3.14                 # Float
+name = "Alice"           # String
+is_valid = True          # Boolean
+
+# Math operations
+result = x + y           # Addition
+result = x - y           # Subtraction
+result = x * y           # Multiplication
+result = x / y           # Division
+result = x % y           # Modulus (remainder)</pre>
+      </div>
+      <div class="help-section">
+        <h4>Conditionals</h4>
+        <pre>if x > 10:
+    print("x is greater than 10")
+elif x == 10:
+    print("x equals 10")
+else:
+    print("x is less than 10")</pre>
+      </div>
+      <div class="help-section">
+        <h4>Loops</h4>
+        <pre># For loop
+for i in range(5):
+    print(i)
+
+# While loop
+count = 0
+while count < 5:
+    print(count)
+    count += 1</pre>
+      </div>
+      <div class="help-section">
+        <h4>Lists</h4>
+        <pre>numbers = [1, 2, 3, 4, 5]
+numbers.append(6)        # Add to end
+print(numbers[0])        # Access by index
+print(len(numbers))      # Get length
+
+for num in numbers:
+    print(num)</pre>
+      </div>
+      <div class="help-section">
+        <h4>Functions</h4>
+        <pre>def greet(name):
+    return "Hello, " + name + "!"
+
+result = greet("Alice")
+print(result)</pre>
+      </div>
+      <div class="help-section">
+        <h4>Math Module</h4>
+        <pre>import math
+
+print(math.sqrt(16))     # Square root
+print(math.pi)           # Pi constant
+print(math.pow(2, 3))    # Power (2^3)</pre>
+      </div>
+      <div class="help-section">
+        <h4>Random Module</h4>
+        <pre>import random
+
+# Random integer
+num = random.randint(1, 10)
+print(num)
+
+# Random choice from list
+colors = ["red", "blue", "green"]
+print(random.choice(colors))
+
+# Random float between 0 and 1
+print(random.random())</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+
+  const logEl = $("#console"), statusText = $("#statusText"), statusDot = $("#statusDot"), editor = $("#editor");
+  const lineNumbers = $("#lineNumbers");
+  const toast = $("#toast");
+  const helpModal = $("#helpModal");
+  
+  let halted = false;
+
+  $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2000);
+  }
+
+  function updateLineNumbers() {
+    const lines = editor.value.split('\n').length;
+    lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+  }
+
+  editor.addEventListener('input', updateLineNumbers);
+  editor.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = editor.scrollTop;
+  });
+
+  function formatValue(val) {
+    if (val === null || val === undefined) {
+      return "undefined";
+    }
+    if (Array.isArray(val)) {
+      return "[" + val.map(v => {
+        if (typeof v === "string") return '"' + v + '"';
+        if (Array.isArray(v)) return formatValue(v);
+        return String(v);
+      }).join(", ") + "]";
+    }
+    return String(val);
+  }
+
+  const out = (m, c = "log") => {
+    const d = document.createElement("div");
+    d.className = "line " + c;
+    d.textContent = formatValue(m);
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  
+  const log = m => out(m, "log");
+  const err = m => out(m, "err");
+  const sys = m => out(m, "sys");
+
+  const setStatus = (s, state = "idle") => {
+    statusText.textContent = s;
+    statusDot.className = "status-dot";
+    if (state === "running") statusDot.classList.add("running");
+    if (state === "error") statusDot.classList.add("error");
+  };
+
+  // Configure Skulpt
+  function builtinRead(x) {
+    if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+      throw "File not found: '" + x + "'";
+    return Sk.builtinFiles["files"][x];
+  }
+
+  // Run Python code
+  function runCode() {
+    if (halted) return;
+
+    const code = editor.value.trim();
+    if (!code) {
+      sys("No code to run");
+      return;
+    }
+
+    // Clear console
+    logEl.innerHTML = "";
+    halted = false;
+    
+    setStatus("Running…", "running");
+
+    // Configure Skulpt
+    Sk.configure({
+      output: function(text) {
+        log(text);
+      },
+      read: builtinRead,
+      __future__: Sk.python3
+    });
+
+    // Run the code
+    Sk.misceval.asyncToPromise(function() {
+      return Sk.importMainWithBody("<stdin>", false, code, true);
+    }).then(
+      function(mod) {
+        // Success
+        setStatus("Finished");
+        sys("✓ Program completed successfully");
+      },
+      function(error) {
+        // Error
+        err("Error: " + error.toString());
+        setStatus("Error", "error");
+      }
+    );
+  }
+
+  function stopCode() {
+    halted = true;
+    setStatus("Stopped", "error");
+    sys("Program stopped");
+  }
+
+  // Event Listeners
+  $("#runBtn").onclick = () => runCode();
+  $("#stopBtn").onclick = () => stopCode();
+
+  $("#copyBtn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(editor.value);
+      showToast("Code copied to clipboard!");
+    } catch (e) {
+      err("Failed to copy code");
+    }
+  };
+
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      $("#runBtn").click();
+    }
+    if (e.key === "Escape") {
+      helpModal.classList.remove("show");
+    }
+  });
+
+  $("#helpBtn").onclick = () => helpModal.classList.add("show");
+  $("#closeHelp").onclick = () => helpModal.classList.remove("show");
+  helpModal.onclick = e => {
+    if (e.target === helpModal) helpModal.classList.remove("show");
+  };
+
+  // Examples dropdown
+  const samples = {
+    "Hello World": `print("Hello, World!")
+print("Welcome to Python!")
+
+name = "Student"
+print("Hello, " + name + "!")`,
+    
+    "Variables & Math": `# Variables
+x = 10
+y = 20
+name = "Alice"
+
+# Math operations
+sum_result = x + y
+difference = y - x
+product = x * y
+quotient = y / x
+
+print("x =", x)
+print("y =", y)
+print("Sum:", sum_result)
+print("Difference:", difference)
+print("Product:", product)
+print("Quotient:", quotient)`,
+
+    "If Statements": `age = 18
+
+if age >= 18:
+    print("You are an adult")
+else:
+    print("You are a minor")
+
+score = 85
+if score >= 90:
+    print("Grade: A")
+elif score >= 80:
+    print("Grade: B")
+elif score >= 70:
+    print("Grade: C")
+else:
+    print("Grade: F")`,
+
+    "For Loop": `# Count to 10
+for i in range(1, 11):
+    print("Number:", i)
+
+# Loop through list
+colors = ["red", "green", "blue"]
+for color in colors:
+    print(color)`,
+
+    "While Loop": `count = 1
+while count <= 5:
+    print("Count:", count)
+    count = count + 1
+
+print("Done!")`,
+
+    "Lists": `# Create a list
+numbers = [10, 20, 30, 40, 50]
+
+# Access elements
+print("First:", numbers[0])
+print("Third:", numbers[2])
+print("Length:", len(numbers))
+
+# Add to list
+numbers.append(60)
+print("After append:", numbers)
+
+# Loop through list
+print("All numbers:")
+for num in numbers:
+    print(num)`,
+
+    "Functions": `def greet(name):
+    return "Hello, " + name + "!"
+
+def add(a, b):
+    return a + b
+
+def square(x):
+    return x * x
+
+# Call functions
+message = greet("Alice")
+print(message)
+
+result = add(10, 25)
+print("10 + 25 =", result)
+
+print("5 squared =", square(5))`,
+
+    "Math Module": `import math
+
+# Basic operations
+print("Square root of 16:", math.sqrt(16))
+print("Pi:", math.pi)
+print("2 to the power of 8:", math.pow(2, 8))
+
+# Circle calculations
+radius = 5
+area = math.pi * radius ** 2
+circumference = 2 * math.pi * radius
+
+print("Circle with radius", radius)
+print("  Area:", round(area, 2))
+print("  Circumference:", round(circumference, 2))`,
+
+    "Random Module": `import random
+
+# Random integer
+print("Random number (1-100):", random.randint(1, 100))
+
+# Dice roll
+roll = random.randint(1, 6)
+print("Dice roll:", roll)
+
+# Random choice
+colors = ["red", "blue", "green", "yellow"]
+chosen = random.choice(colors)
+print("Random color:", chosen)
+
+# Coin flip
+coin = random.randint(0, 1)
+if coin == 0:
+    print("Heads!")
+else:
+    print("Tails!")`,
+
+    "Find Maximum": `numbers = [23, 67, 45, 89, 12, 56, 78]
+
+maximum = numbers[0]
+for num in numbers:
+    if num > maximum:
+        maximum = num
+
+print("Numbers:", numbers)
+print("Maximum:", maximum)`,
+
+    "Even/Odd Counter": `numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+even_count = 0
+odd_count = 0
+
+for num in numbers:
+    if num % 2 == 0:
+        even_count = even_count + 1
+    else:
+        odd_count = odd_count + 1
+
+print("Even numbers:", even_count)
+print("Odd numbers:", odd_count)`,
+
+    "Factorial": `def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    result = 1
+    for i in range(2, n + 1):
+        result = result * i
+    return result
+
+num = 5
+result = factorial(num)
+print(str(num) + "! =", result)
+
+# Try more
+print("6! =", factorial(6))
+print("7! =", factorial(7))`
+  };
+
+  const samplesMenu = $("#samplesMenu");
+  
+  for (const [name, code] of Object.entries(samples)) {
+    const item = document.createElement("div");
+    item.className = "dropdown-item";
+    item.textContent = name;
+    item.onclick = () => {
+      editor.value = code;
+      updateLineNumbers();
+      samplesMenu.classList.remove("show");
+    };
+    samplesMenu.appendChild(item);
+  }
+
+  const samplesBtn = $("#samplesBtn");
+  samplesBtn.onclick = (e) => {
+    e.stopPropagation();
+    samplesMenu.classList.toggle("show");
+  };
+
+  document.addEventListener("click", () => samplesMenu.classList.remove("show"));
+  samplesMenu.onclick = (e) => e.stopPropagation();
+
+  updateLineNumbers();
+
+  // Resizer
+  const resizer = $("#resizer");
+  const mainEl = $("main");
+  let isResizing = false;
+
+  resizer.addEventListener("mousedown", (e) => {
+    isResizing = true;
+    document.body.style.cursor = "col-resize";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isResizing) return;
+    const mainRect = mainEl.getBoundingClientRect();
+    const offsetX = e.clientX - mainRect.left;
+    const percentage = (offsetX / mainRect.width) * 100;
+    if (percentage > 20 && percentage < 80) {
+      mainEl.style.gridTemplateColumns = `${percentage}fr ${100 - percentage}fr`;
+      resizer.style.left = `calc(${percentage}% - 6px)`;
+    }
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = "";
+    }
+  });
+
+  setStatus("Ready");
+  sys("✓ Python ready. Press Run to execute.");
+});
+</script>
+</body>
+</html>
