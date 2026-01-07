@@ -2296,7 +2296,7 @@ $("#themeBtn").onclick = () => document.body.classList.toggle("light-mode");
   document.addEventListener("click", () => samplesMenu.classList.remove("show"));
   samplesMenu.onclick = (e) => e.stopPropagation();
 
-  editor.value = `DISPLAY("# Welcome to Pseudocode!")`;
+  editor.value = `DISPLAY("// Welcome to Pseudocode!")`;
   updateLineNumbers();
 
   const resizer = $("#resizer");
